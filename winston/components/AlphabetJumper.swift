@@ -9,7 +9,7 @@ import SwiftUI
 
 struct AlphabetJumper: View {
   var letters: [String]
-  @Binding var searchText: Debouncer<String>
+  @Binding var searchFocused: Bool
   var proxy: ScrollViewProxy
   @GestureState private var scrollLetter = ""
   @State private var haptic = UIImpactFeedbackGenerator(style: .rigid)
@@ -61,7 +61,7 @@ struct AlphabetJumper: View {
       .frame(height: .screenH, alignment: .trailing)
       .ignoresSafeArea()
       .foregroundStyle(Color.accentColor)
-      .opacity(searchText.debounced == "" ? 1 : 0)
-      .animation(.spring, value: searchText.debounced)
+      .opacity(!searchFocused ? 1 : 0)
+      .animation(.spring, value: searchFocused)
   }
 }

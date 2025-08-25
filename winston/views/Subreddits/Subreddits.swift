@@ -52,7 +52,17 @@ struct Subreddits: View, Equatable {
     }
   }
   
-  func selectSub(_ sub: Subreddit) { firstDestination = .reddit(.subFeed(sub)) }
+  func selectSub(_ sub: Subreddit) {
+    firstDestination = .reddit(.subFeed(sub))
+    
+    if searchFocused {
+      saveRecentSub(sub)
+      
+      if searchText.debounced == "" {
+        searchFocused = false
+      }
+    }
+  }
   
   var body: some View {
     ScrollViewReader { proxy in
@@ -63,7 +73,7 @@ struct Subreddits: View, Equatable {
             ForEach(recentSubs, id: \.self) { subName in
               if let cachedSub = subreddits.first(where: { $0.name == subName }) {
                 let sub = Subreddit(data: SubredditData(entity: cachedSub))
-                SubItem(isActive: Router.NavDest.reddit(.subFeed(sub)) == firstDestination, sub: sub, cachedSub: cachedSub, action: { s in saveRecentSub(s); selectSub(s); }, localFavState: $localFavState, showSubs: true)
+                SubItem(isActive: Router.NavDest.reddit(.subFeed(sub)) == firstDestination, sub: sub, cachedSub: cachedSub, action: selectSub, localFavState: $localFavState, showSubs: true)
                   .swipeActions {
                     Button(role: .destructive) {
                       removeRecentSub(subName)
@@ -134,7 +144,10 @@ struct Subreddits: View, Equatable {
               Section("My subs") {
                 ForEach(foundSubs, id: \.self.uuid) { cachedSub in
                   let sub = Subreddit(data: SubredditData(entity: cachedSub))
-                  SubItem(isActive: Router.NavDest.reddit(.subFeed(sub)) == firstDestination, sub: sub, cachedSub: cachedSub, action: selectSub, localFavState: $localFavState, showSubs: true)
+                  SubItem(isActive: Router.NavDest.reddit(.subFeed(sub)) == firstDestination, sub: sub, cachedSub: cachedSub, action: { sub in
+                    saveRecentSub(sub)
+                    selectSub(sub)
+                  }, localFavState: $localFavState, showSubs: true)
                 }
               }
             }
@@ -143,10 +156,7 @@ struct Subreddits: View, Equatable {
             let filteredMatches = matchedSubs.filter { match in !foundSubs.contains(where: { cached in cached.name == match.data?.name })}
             Section("All subs") {
               ForEach(filteredMatches, id: \.self.id) { sub in
-                SubItem(isActive: Router.NavDest.reddit(.subFeed(sub)) == firstDestination, sub: sub, action: { sub in
-                  saveRecentSub(sub)
-                  selectSub(sub)
-                }, localFavState: $localFavState, showSubs: true)
+                SubItem(isActive: Router.NavDest.reddit(.subFeed(sub)) == firstDestination, sub: sub, action: selectSub, localFavState: $localFavState, showSubs: true)
               }
             }
             
@@ -238,9 +248,8 @@ struct Subreddits: View, Equatable {
 //        }
 //      }
       .overlay(
-        AlphabetJumper(letters: sections.keys.sorted(), searchText: $searchText, proxy: proxy)
-          , alignment: .trailing
-      )
+          AlphabetJumper(letters: sections.keys.sorted(), searchFocused: $searchFocused, proxy: proxy)
+      , alignment: .trailing)
       .refreshable {
         Task(priority: .background) {
           await updatePostsInBox(RedditAPI.shared, force: true)
