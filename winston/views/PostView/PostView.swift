@@ -634,159 +634,162 @@ struct PostView: View, Equatable {
           }
         }
         .overlay(alignment: .bottom) {
-          VStack(spacing: 8) {
+          VStack(spacing: 6) {
             
             if searchOpen {
               HStack {
                 TextField("Search comments...", text: $searchQuery.value)
-                  .fontSize(17)
+                  .fontSize(18)
                   .autocorrectionDisabled(true)
                   .focused($searchFocused)
-                  .foregroundColor(Color.hex("7D7E80"))
+//                  .foregroundColor(Color.hex("7D7E80"))
                   .onChange(of: searchQuery.debounced) { _, val in
                     currentMatchId = ""
                     updateMatches(proxy)
                   }
-                
+                  .padding(.horizontal, 16)
+                  .padding(.vertical, 10)
+                  .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 20))
                 Spacer()
               }
             }
             
-            HStack(spacing: 12) {
-              HStack(spacing: 8) {
-                
-                let matchesStr = "\(currentMatchIndex)/\(totalMatches)"
-                let matchesWidth = matchesStr.width(font: UIFont.systemFont(ofSize: 16, weight: .semibold))
-                HStack(spacing: 4)  {
+            HStack(spacing: 6) {
+              HStack(spacing: 4) {
+                // Matches bubble
+                HStack(spacing: 6)  {
                   Image(systemName: searchOpen ? "text.page.badge.magnifyingglass" : "message.badge")
-                    .fontSize(13, .semibold)
-                    .foregroundStyle(Color(UIColor(hex: "7D7E80")))
-                  
-                  Text(matchesStr)
-                    .fontSize(16, .semibold)
-                    .foregroundStyle(Color(UIColor(hex: "7D7E80")))
+                    .fontSize(14, .semibold)
+                    // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
+                  Text("\(currentMatchIndex)/\(totalMatches)")
+                    .fontSize(17, .semibold)
+                    // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
                     .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                 }
-                .frame(width: matchesWidth + 22)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.hex("2C2E32").clipShape(RoundedRectangle(cornerRadius:12)))
-              
-                let commentStr = "\(flattened.count)/\(post.data?.num_comments ?? 0)"
-                let commentWidth = commentStr.width(font: UIFont.systemFont(ofSize: 16, weight: .semibold))
-                HStack(spacing: 4)  {
+                .frame(height: 38)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 0)
+                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 20))
+                
+                // Comment count bubble
+                HStack(spacing: 6)  {
                   let numComments = post.data?.num_comments ?? 0
                   let allLoaded = flattened.count >= numComments
-                  
                   Image(systemName: allLoaded ? "arrow.down.circle" : "arrow.down.circle.dotted")
-                  .fontSize(13, .semibold)
-                  .foregroundStyle(Color(UIColor(hex: "7D7E80")))
-              
-                  Text(commentStr)
-                    .fontSize(16, .semibold)
-                    .foregroundStyle(Color(UIColor(hex: "7D7E80")))
-                    .fixedSize(horizontal: false, vertical: true)
+                    .fontSize(14, .semibold)
+                    // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
+                  Text("\(flattened.count)/\(numComments)")
+                    .fontSize(17, .semibold)
+                    // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
                     .lineLimit(1)
-                    .allowsTightening(true)
+                    .fixedSize(horizontal: true, vertical: false)
                 }
-                .frame(width: commentWidth + 22)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.hex("2C2E32").clipShape(RoundedRectangle(cornerRadius:12)))
-                
-              }
-              
-              HStack(spacing: 4) {
-                Image(systemName: "chevron.left")
-                  .fontSize(17, .semibold)
-                  .foregroundStyle(Color(UIColor(hex: "7D7E80")))
-                  .padding(.horizontal, 10)
-                  .padding(.vertical, 6)
-                  .background(Color.hex("2C2E32").clipShape(RoundedRectangle(cornerRadius:12)))
-                  .increaseHitboxOf(24, by: 1.5, shape: Circle())
-                  .onTapGesture {
-                    Hap.shared.play(intensity: 0.75, sharpness: 0.9)
-                    scrollToNextMatch(false, proxy)
-                  }
-                
-                Image(systemName: "chevron.right")
-                  .fontSize(17, .semibold)
-                  .foregroundStyle(Color(UIColor(hex: "7D7E80")))
-                  .padding(.horizontal, 10)
-                  .padding(.vertical, 6)
-                  .background(Color.hex("2C2E32").clipShape(RoundedRectangle(cornerRadius:12)))
-                  .increaseHitboxOf(24, by: 1.5, shape: Circle())
-                  .onTapGesture {
-                    Hap.shared.play(intensity: 0.75, sharpness: 0.9)
-                    scrollToNextMatch(true, proxy)
-                  }
+                .frame(height: 38)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 0)
+                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 20))
               }
               
               Spacer()
               
-              if searchFocused {
-                Image(systemName: "chevron.down")
-                  .opacity(searchFocused ? 1 : 0)
-                  .fontSize(16, .semibold)
-                  .foregroundStyle(Color(UIColor(hex: "7D7E80")))
-                  .padding([.trailing], 4)
-                  .increaseHitboxOf(24, by: 1.5, shape: Circle())
+              HStack(spacing: 0) {
+                Image(systemName: "chevron.left")
+                  .fontSize(18, .semibold)
+                  // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
+                  .padding(.horizontal, 14)
+                  .padding(.vertical,  0)
+                  .frame(height: 38)
+                  .increaseHitboxOf(24, by: 1.25, shape: Circle())
                   .onTapGesture {
                     Hap.shared.play(intensity: 0.75, sharpness: 0.9)
-                    DispatchQueue.main.async {
-                      withAnimation {
-                        searchFocused = false
-                      }
-                    }
+                    scrollToNextMatch(false, proxy)
                   }
-              }
-              
-              Image(systemName: "xmark")
-                .fontSize(16, .semibold)
-                .foregroundStyle(Color(UIColor(hex: "7D7E80")))
-                .padding([.trailing], 4)
-                .increaseHitboxOf(24, by: 1.5, shape: Circle())
-                .onTapGesture {
-                  Hap.shared.play(intensity: 0.75, sharpness: 0.9)
-                  
-                  if searchFocused {
-                    DispatchQueue.main.async {
-                      withAnimation {
-                        searchFocused = false
-                      }
-                    }
-                    
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                      withAnimation {
-                        searchOpen = false
-                        searchQuery.value = ""
-                      }
-                    }
-                  } else {
-                    DispatchQueue.main.async {
-                      withAnimation {
-                        searchQuery.value = ""
-                        searchOpen = false
-                        unseenSkipperOpen = false
-                      }
-                    }
+                  .glassEffect(.regular.interactive(), in: Circle())
+                
+                Image(systemName: "chevron.right")
+                  .fontSize(18, .semibold)
+                  // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
+                  .padding(.horizontal, 14)
+                  .padding(.vertical, 0)
+                  .frame(height: 38)
+                  .increaseHitboxOf(24, by: 1.25, shape: Circle())
+                  .onTapGesture {
+                    Hap.shared.play(intensity: 0.75, sharpness: 0.9)
+                    scrollToNextMatch(true, proxy)
                   }
+                  .glassEffect(.regular.interactive(), in: Circle())
+                
+                // Down chevron (for searchFocused)
+                if searchFocused {
+                  Image(systemName: "chevron.down")
+                    .opacity(searchFocused ? 1 : 0)
+                    .fontSize(18, .semibold)
+                    // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 0)
+                    .contentShape(Circle())
+                    .frame(height: 38)
+                    .increaseHitboxOf(24, by: 1.25, shape: Circle())
+                    .onTapGesture {
+                      Hap.shared.play(intensity: 0.75, sharpness: 0.9)
+                      DispatchQueue.main.async {
+                        withAnimation {
+                          searchFocused = false
+                        }
+                      }
+                    }
+                    .glassEffect(.regular.interactive(), in: Circle())
                 }
-              
+                
+                // Close/X bubble
+                Image(systemName: "xmark")
+                  .fontSize(18, .semibold)
+                  // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
+                  .padding(.horizontal, 14)
+                  .padding(.vertical, 0)
+                  .contentShape(Circle())
+                  .frame(height: 38)
+                  .increaseHitboxOf(24, by: 1.25, shape: Circle())
+                  .onTapGesture {
+                    Hap.shared.play(intensity: 0.75, sharpness: 0.9)
+                    if searchFocused {
+                      DispatchQueue.main.async {
+                        withAnimation {
+                          searchFocused = false
+                        }
+                      }
+                      DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        withAnimation {
+                          searchOpen = false
+                          searchQuery.value = ""
+                        }
+                      }
+                    } else {
+                      DispatchQueue.main.async {
+                        withAnimation {
+                          searchQuery.value = ""
+                          searchOpen = false
+                          unseenSkipperOpen = false
+                        }
+                      }
+                    }
+                  }
+                  .glassEffect(.regular.interactive(), in: Circle())
+              }
             }
           }
           .padding(.horizontal, 12)
-          .padding(.vertical, 12)
+          .padding(.bottom, 8)
           .frame(maxWidth: searchOpen || unseenSkipperOpen ? .infinity : 0)
           .animation(.bouncy(duration: 0.5), value: searchOpen || unseenSkipperOpen)
 //          .background(Color.hex("212326").clipShape(RoundedRectangle(cornerRadius:20)))
-          .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius:20))
-          .clipShape(RoundedRectangle(cornerRadius:20))
-          .shadow(color: Color.hex("212326"), radius: 10)
+//          .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius:20))
+//          .clipShape(RoundedRectangle(cornerRadius:20))
+//          .shadow(color: Color.hex("212326"), radius: 10)
           .opacity(searchOpen || unseenSkipperOpen ? 1 : 0)
           .animation(.bouncy(duration: 0.5), value: searchOpen || unseenSkipperOpen)
-          .padding(.horizontal, 32)
-          .padding([.bottom], 12)
+          .padding(.horizontal, 12)
           .ignoresSafeArea(.keyboard)
           
         }
@@ -988,3 +991,4 @@ func isGameThread(_ str: String?) -> Bool {
   let lowercase = str.lowercased()
   return lowercase.contains("game thread") && !lowercase.contains("post game thread")
 }
+
