@@ -655,7 +655,7 @@ struct PostView: View, Equatable {
             }
             
             HStack(spacing: 6) {
-              HStack(spacing: 4) {
+              HStack(spacing: 6) {
                 // Matches bubble
                 HStack(spacing: 6)  {
                   Image(systemName: searchOpen ? "text.page.badge.magnifyingglass" : "message.badge")
@@ -693,39 +693,61 @@ struct PostView: View, Equatable {
               
               Spacer()
               
-              HStack(spacing: 0) {
-                Image(systemName: "chevron.left")
-                  .fontSize(18, .semibold)
-                  // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
-                  .padding(.horizontal, 14)
-                  .padding(.vertical,  0)
-                  .frame(height: 38)
-                  .increaseHitboxOf(24, by: 1.25, shape: Circle())
-                  .onTapGesture {
-                    Hap.shared.play(intensity: 0.75, sharpness: 0.9)
-                    scrollToNextMatch(false, proxy)
-                  }
-                  .glassEffect(.regular.interactive(), in: Circle())
-                
-                Image(systemName: "chevron.right")
-                  .fontSize(18, .semibold)
-                  // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
-                  .padding(.horizontal, 14)
-                  .padding(.vertical, 0)
-                  .frame(height: 38)
-                  .increaseHitboxOf(24, by: 1.25, shape: Circle())
-                  .onTapGesture {
-                    Hap.shared.play(intensity: 0.75, sharpness: 0.9)
-                    scrollToNextMatch(true, proxy)
-                  }
-                  .glassEffect(.regular.interactive(), in: Circle())
-                
-                // Down chevron (for searchFocused)
-                if searchFocused {
-                  Image(systemName: "chevron.down")
-                    .opacity(searchFocused ? 1 : 0)
-                    .fontSize(18, .semibold)
+              GlassEffectContainer {
+                HStack(spacing: 4) {
+                  HStack(spacing: -8) {
+                    Image(systemName: "chevron.left")
+                      .fontSize(18, .semibold)
                     // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
+                      .padding(.horizontal, 14)
+                      .padding(.vertical,  0)
+                      .frame(height: 38)
+                      .increaseHitboxOf(24, by: 1.25, shape: Circle())
+                      .onTapGesture {
+                        Hap.shared.play(intensity: 0.75, sharpness: 0.9)
+                        scrollToNextMatch(false, proxy)
+                      }
+                    Image(systemName: "chevron.right")
+                      .fontSize(18, .semibold)
+                    // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
+                      .padding(.horizontal, 14)
+                      .padding(.vertical, 0)
+                      .frame(height: 38)
+                      .increaseHitboxOf(24, by: 1.25, shape: Circle())
+                      .onTapGesture {
+                        Hap.shared.play(intensity: 0.75, sharpness: 0.9)
+                        scrollToNextMatch(true, proxy)
+                      }
+                  }
+                  .glassEffect(.regular.interactive(), in: Capsule(style: .circular))
+
+                  
+                  // Down chevron (for searchFocused)
+                  if searchFocused {
+                    Image(systemName: "chevron.down")
+                      .opacity(searchFocused ? 1 : 0)
+                      .fontSize(18, .semibold)
+                    // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
+                      .padding(.horizontal, 14)
+                      .padding(.vertical, 0)
+                      .contentShape(Circle())
+                      .frame(height: 38)
+                      .increaseHitboxOf(24, by: 1.25, shape: Circle())
+                      .onTapGesture {
+                        Hap.shared.play(intensity: 0.75, sharpness: 0.9)
+                        DispatchQueue.main.async {
+                          withAnimation {
+                            searchFocused = false
+                          }
+                        }
+                      }
+                      .glassEffect(.regular.interactive(), in: Circle())
+                  }
+                  
+                  // Close/X bubble
+                  Image(systemName: "xmark")
+                    .fontSize(18, .semibold)
+                  // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 0)
                     .contentShape(Circle())
@@ -733,54 +755,35 @@ struct PostView: View, Equatable {
                     .increaseHitboxOf(24, by: 1.25, shape: Circle())
                     .onTapGesture {
                       Hap.shared.play(intensity: 0.75, sharpness: 0.9)
-                      DispatchQueue.main.async {
-                        withAnimation {
-                          searchFocused = false
+                      if searchFocused {
+                        DispatchQueue.main.async {
+                          withAnimation {
+                            searchFocused = false
+                          }
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                          withAnimation {
+                            searchOpen = false
+                            searchQuery.value = ""
+                          }
+                        }
+                      } else {
+                        DispatchQueue.main.async {
+                          withAnimation {
+                            searchQuery.value = ""
+                            searchOpen = false
+                            unseenSkipperOpen = false
+                          }
                         }
                       }
                     }
                     .glassEffect(.regular.interactive(), in: Circle())
                 }
-                
-                // Close/X bubble
-                Image(systemName: "xmark")
-                  .fontSize(18, .semibold)
-                  // .foregroundStyle(Color(UIColor(hex: "7D7E80")))
-                  .padding(.horizontal, 14)
-                  .padding(.vertical, 0)
-                  .contentShape(Circle())
-                  .frame(height: 38)
-                  .increaseHitboxOf(24, by: 1.25, shape: Circle())
-                  .onTapGesture {
-                    Hap.shared.play(intensity: 0.75, sharpness: 0.9)
-                    if searchFocused {
-                      DispatchQueue.main.async {
-                        withAnimation {
-                          searchFocused = false
-                        }
-                      }
-                      DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        withAnimation {
-                          searchOpen = false
-                          searchQuery.value = ""
-                        }
-                      }
-                    } else {
-                      DispatchQueue.main.async {
-                        withAnimation {
-                          searchQuery.value = ""
-                          searchOpen = false
-                          unseenSkipperOpen = false
-                        }
-                      }
-                    }
-                  }
-                  .glassEffect(.regular.interactive(), in: Circle())
               }
             }
           }
           .padding(.horizontal, 12)
-          .padding(.bottom, 8)
+          .padding(.bottom, 10)
           .frame(maxWidth: searchOpen || unseenSkipperOpen ? .infinity : 0)
           .animation(.bouncy(duration: 0.5), value: searchOpen || unseenSkipperOpen)
 //          .background(Color.hex("212326").clipShape(RoundedRectangle(cornerRadius:20)))
