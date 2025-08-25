@@ -83,11 +83,12 @@ extension RedditAPI {
         
         if deleteOthers {
           let localFavorites = Defaults[.localFavorites]
+          let recentlySearched = Defaults[.recentSearchedSubs]
           
           // Delete CachedSubs not present in the fetched subs
           let currentSubsSet = Set(subs.compactMap { $0.data?.name })
           results.forEach { cachedSub in
-            if !currentSubsSet.contains(cachedSub.name ?? "") && !localFavorites.contains(cachedSub.name ?? "") {
+            if !currentSubsSet.contains(cachedSub.name ?? "") && !localFavorites.contains(cachedSub.name ?? "") && !recentlySearched.contains(cachedSub.name ?? "") {
               context.delete(cachedSub)
             }
           }

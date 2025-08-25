@@ -60,6 +60,7 @@ extension Defaults.Keys {
   static let filteredSubreddits = Key<[String]>("filteredSubreddits", default: [])
   static let postsInBox = Key<[PostInBox]>("postsInBox-v2", default: [])
   static let localFavorites = Key<[String]>("localFavorites", default: [])
+  static let recentSearchedSubs = Key<[String]>("recentSearchedSubs", default: [])
   static let localHideSeen = Key<[String]>("localHideSeen", default: [])
   static let subredditFilters = Key<Dictionary<String, String>>("subredditFilters", default: [:])
 

@@ -15,7 +15,7 @@ let alphabetLetters = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ").map { String($0) }
 
 struct Subreddits: View, Equatable {
   static func == (lhs: Subreddits, rhs: Subreddits) -> Bool {
-    return lhs.loaded == rhs.loaded && lhs.currentCredentialID == rhs.currentCredentialID
+    return lhs.loaded == rhs.loaded && lhs.currentCredentialID == rhs.currentCredentialID && lhs.recentSubs == rhs.recentSubs && lhs.searchFocused == rhs.searchFocused
   }
 //  @State
   @Binding var firstDestination: Router.NavDest?
@@ -23,7 +23,10 @@ struct Subreddits: View, Equatable {
   var currentCredentialID: UUID
   
   @Default(.localFavorites) private var localFavorites
+  @Default(.recentSearchedSubs) private var recentSearchedSubs
   @State private var localFavState: [String] = []
+  @State private var recentSubs: [String] = []
+  @State private var searchFocused: Bool = false
   
   init(firstDestination: Binding<Router.NavDest?>, loaded: Bool, currentCredentialID: UUID) {
     self.currentCredentialID = currentCredentialID
@@ -54,7 +57,26 @@ struct Subreddits: View, Equatable {
   var body: some View {
     ScrollViewReader { proxy in
       List(selection: $firstDestination) {
-        if searchText.debounced == "" {
+        
+        if searchFocused && searchText.debounced == "" && recentSubs.count > 0 {
+          Section("Recent") {
+            ForEach(recentSubs, id: \.self) { subName in
+              if let cachedSub = subreddits.first(where: { $0.name == subName }) {
+                let sub = Subreddit(data: SubredditData(entity: cachedSub))
+                SubItem(isActive: Router.NavDest.reddit(.subFeed(sub)) == firstDestination, sub: sub, cachedSub: cachedSub, action: { s in saveRecentSub(s); selectSub(s); }, localFavState: $localFavState, showSubs: true)
+                  .swipeActions {
+                    Button(role: .destructive) {
+                      removeRecentSub(subName)
+                    } label: {
+                      Label("Remove", systemImage: "trash")
+                    }
+                  }
+              }
+            }
+          }
+        }
+        
+        if !searchFocused {
           VStack(spacing: 12) {
             HStack(spacing: 12) {
               ListBigBtn(icon: "chart.line.uptrend.xyaxis.circle.fill", iconColor: .blue, label: "Popular") {
@@ -83,6 +105,7 @@ struct Subreddits: View, Equatable {
           .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
           .onAppear {
             localFavState = localFavorites
+            recentSubs = recentSearchedSubs
           }
           
           if multis.count > 0 {
@@ -120,7 +143,10 @@ struct Subreddits: View, Equatable {
             let filteredMatches = matchedSubs.filter { match in !foundSubs.contains(where: { cached in cached.name == match.data?.name })}
             Section("All subs") {
               ForEach(filteredMatches, id: \.self.id) { sub in
-                SubItem(isActive: Router.NavDest.reddit(.subFeed(sub)) == firstDestination, sub: sub, action: selectSub, localFavState: $localFavState, showSubs: true)
+                SubItem(isActive: Router.NavDest.reddit(.subFeed(sub)) == firstDestination, sub: sub, action: { sub in
+                  saveRecentSub(sub)
+                  selectSub(sub)
+                }, localFavState: $localFavState, showSubs: true)
               }
             }
             
@@ -188,7 +214,7 @@ struct Subreddits: View, Equatable {
       .listStyle(.sidebar)
       .scrollDismissesKeyboard(.immediately)
       .loader(!loaded && subreddits.count == 0)
-      .searchable(text: $searchText.value, prompt: "Search my subreddits")
+      .searchable(text: $searchText.value, isPresented: $searchFocused, prompt: "Search my subreddits")
       .onChange(of: searchText.debounced) { _, newValue in
         Task {
           let matches = await RedditAPI.shared.searchSubreddits(newValue)?.map({ Subreddit(data: $0) })
@@ -202,6 +228,9 @@ struct Subreddits: View, Equatable {
       }
       .onChange(of: localFavorites) {
         localFavState = localFavorites
+      }
+      .onChange(of: recentSearchedSubs) { _ in
+        recentSubs = recentSearchedSubs
       }
 //      .toolbar {
 //        ToolbarItem(placement: .navigationBarTrailing) {
@@ -236,6 +265,30 @@ struct Subreddits: View, Equatable {
       }
     }
   }
+  
+  func saveRecentSub(_ sub: Subreddit) {
+    if sub.data?.over18 ?? false { return }
+    let name = sub.data?.name ?? ""
+    
+    if !recentSearchedSubs.contains(name) {
+      recentSearchedSubs.insert(name, at: 0)
+      if recentSearchedSubs.count > 5 { recentSearchedSubs.removeLast() }
+    } else {
+      recentSearchedSubs.removeAll { $0 == name }
+      recentSearchedSubs.insert(name, at: 0)
+    }
+    
+    recentSubs = recentSearchedSubs
+    // Try to ensure CachedSub exists
+//    if !subreddits.contains(where: { $0.name == name }) {
+//      Task { await _ = RedditAPI.shared.fetchSub(sub.data?.display_name ?? name) }
+//    }
+  }
+  
+  func removeRecentSub(_ name: String) {
+    recentSearchedSubs.removeAll { $0 == name }
+    recentSubs = recentSearchedSubs
+  }
 }
 
 //struct Posts_Previews: PreviewProvider {
@@ -243,3 +296,4 @@ struct Subreddits: View, Equatable {
 //    Posts()
 //  }
 //}
+
