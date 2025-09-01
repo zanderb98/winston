@@ -184,13 +184,12 @@ struct CommentLinkMore: View {
   @State var hasRequestedAutoLoad = false
   
   @Environment(\.useTheme) private var selectedTheme
+  @Default(.BehaviorDefSettings) private var behaviorDefSettings
+  
   @StateObject private var autoLoadManager = CommentAutoLoadManager.shared
   
   private let timerInterval: TimeInterval = 0.1
-  
-  private func getAutoLoadDuration() -> TimeInterval {
-    return NetworkMonitor.shared.connectedToWifi ? 1.25 : 3
-  }
+
   
   func handleTap() {
     // Cancel auto-load timer when manually tapped
@@ -236,7 +235,7 @@ struct CommentLinkMore: View {
     }
     
     // Start the progress timer
-    let duration = getAutoLoadDuration()
+    let duration = 1.25
     autoLoadTimer = Timer.scheduledTimer(withTimeInterval: timerInterval, repeats: true) { timer in
       DispatchQueue.main.async {
         // Check if we're still allowed to auto-load (not dragging, still our turn)
@@ -404,7 +403,7 @@ struct CommentLinkMore: View {
           return
         }
         
-        if NetworkMonitor.shared.connectedToWifi, let count = data.count, count == 1 {
+        if NetworkMonitor.shared.connectedToWifiIfDataSaver(), let count = data.count, count == 1 {
           handleTap()
           return
         }

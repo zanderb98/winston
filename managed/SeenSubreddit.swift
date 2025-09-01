@@ -18,7 +18,6 @@ public class SeenSubreddit: NSManagedObject {
     
     func addPostId(_ postId: String) {
         var currentDict = safePostIdsWithDates
-        print("[SEEN-POST] Added  \(postId) for subreddit \(subId)")
         currentDict[postId] = Date()
         postIdsWithDates = currentDict
     }

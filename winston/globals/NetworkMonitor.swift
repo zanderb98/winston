@@ -7,6 +7,7 @@
 
 import Foundation
 import Network
+import Defaults
 
 @Observable
 final class NetworkMonitor {
@@ -15,7 +16,7 @@ final class NetworkMonitor {
   private let networkMonitor = NWPathMonitor()
   private let workerQueue = DispatchQueue(label: "Monitor")
   var connectedToWifi = false
-
+  
   init(start: Bool = true) {
       networkMonitor.pathUpdateHandler = { path in
         self.connectedToWifi = path.usesInterfaceType(.wifi)
@@ -25,6 +26,10 @@ final class NetworkMonitor {
         networkMonitor.start(queue: workerQueue)
       }
     }
+  
+  func connectedToWifiIfDataSaver() -> Bool {
+    return connectedToWifi || !Defaults[.BehaviorDefSettings].dataSaver
+  }
   
   static func isConnectedToWiFi() -> Bool {
       let monitor = NWPathMonitor(requiredInterfaceType: .wifi)
@@ -46,3 +51,4 @@ final class NetworkMonitor {
       return isWiFi
   }
 }
+

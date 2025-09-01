@@ -99,6 +99,7 @@ struct CommentLinkContent: View {
   @State private var loadGif = false
   @State private var commentSwipeActions: SwipeActionsSet = Defaults[.CommentLinkDefSettings].swipeActions
   
+  @Default(.BehaviorDefSettings) private var behaviorDefSettings
   @Default(.CommentLinkDefSettings) private var defSettings
   @Default(.CommentsSectionDefSettings) private var sectionDefSettings
   
@@ -288,7 +289,7 @@ struct CommentLinkContent: View {
                 if let url = winstonData.gifURL {
                   let contentH = winstonData.gifSize != nil ? contentW * (winstonData.gifSize!.height / winstonData.gifSize!.width) : contentW * 9/16
                   
-                  if NetworkMonitor.shared.connectedToWifi || loadGif {
+                  if NetworkMonitor.shared.connectedToWifiIfDataSaver() || loadGif {
                     AnimatedGifView(url: url)
                       .frame(width: contentW, height: contentH)
                       .clipped()

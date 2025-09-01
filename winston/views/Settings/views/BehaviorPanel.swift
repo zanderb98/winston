@@ -26,6 +26,7 @@ struct BehaviorPanel: View {
       
       Group {
         Section("General") {
+          Toggle("Data Saver Mode", isOn: $behaviorDefSettings.dataSaver)
           Toggle("Open Youtube Videos Externally", isOn: $behaviorDefSettings.openYoutubeApp)
 #if !os(macOS)
           let auth_type = Biometrics().biometricType()

@@ -138,7 +138,7 @@ struct SharedVideo: Equatable {
       let playerItem = AVPlayerItem(asset: asset)
       self.player = AVPlayer(playerItem: playerItem)
     } else {
-      if NetworkMonitor.shared.connectedToWifi {
+      if NetworkMonitor.shared.connectedToWifiIfDataSaver() {
         self.player = AVPlayer(url: url)
         if let asset = self.player.currentItem?.asset {
           Caches.videos.addKeyValue(key: self.key, data: { asset }, expires: Date().dateByAdding(1, .day).date)
@@ -359,7 +359,7 @@ struct VideoPlayerPost: View, Equatable {
           
           if (sharedVideo.player.status == .failed) {
               resetVideo?(sharedVideo)
-          } else if NetworkMonitor.shared.connectedToWifi {
+          } else if NetworkMonitor.shared.connectedToWifiIfDataSaver() {
               sharedVideo.loadIfNeeded()
           }
           
