@@ -219,9 +219,23 @@ extension Subreddit {
         }
       } else {
         entities = Post.initMultiple(datas: data.compactMap {
-          if case .first(let postData) = $0.data {
+          if case .first(var postData) = $0.data {
+            if IMAGES_FORMATS.contains(where: { postData.url.hasSuffix($0) }), postData.preview == nil, let url = rootURL(postData.url) {
+              if let imageSource = CGImageSourceCreateWithURL(url as CFURL, nil),
+                let imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any],
+                let pixelWidth = imageProperties[kCGImagePropertyPixelWidth] as? CGFloat,
+                let pixelHeight = imageProperties[kCGImagePropertyPixelHeight] as? CGFloat {
+                
+                let previewImg = PreviewImg(url: postData.url, width: Int(pixelWidth), height: Int(pixelHeight), id: nil)
+                let previewImgCollection = PreviewImgCollection(source: previewImg, resolutions: nil, id: nil)
+                
+                postData.preview = Preview(images: [previewImgCollection], reddit_video_preview: nil, enabled: false)
+              }
+            }
+            
             return postData
           }
+          
           return nil
         }, sub: self, contentWidth: contentWidth).map { .post($0) }
       }
@@ -347,3 +361,4 @@ extension SubListingSortOption: CaseIterable {
     return [.best, .hot, .new, .controversial, .top(.all)]
   }
 }
+

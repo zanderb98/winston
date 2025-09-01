@@ -184,6 +184,24 @@ struct Subreddits: View, Equatable {
               }
             }
             
+            if !searchFocused && recentSubs.count > 0 {
+              Section("Recent Searches") {
+                ForEach(recentSubs, id: \.self) { subName in
+                  if let cachedSub = subreddits.first(where: { $0.name == subName }) {
+                    let sub = Subreddit(data: SubredditData(entity: cachedSub))
+                    SubItem(isActive: Router.NavDest.reddit(.subFeed(sub)) == firstDestination, sub: sub, cachedSub: cachedSub, action: selectSub, localFavState: $localFavState, showSubs: true)
+                      .swipeActions {
+                        Button(role: .destructive) {
+                          removeRecentSub(subName)
+                        } label: {
+                          Label("Remove", systemImage: "trash")
+                        }
+                      }
+                  }
+                }
+              }
+            }
+            
             if appearanceDefSettings.disableAlphabetLettersSectionsInSubsList {
               
               Section("Subs") {
@@ -213,7 +231,6 @@ struct Subreddits: View, Equatable {
                 }
               }
             }
-            
           }
         }
         .themedListSection()
