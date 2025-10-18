@@ -298,7 +298,7 @@ struct Subreddits: View, Equatable {
     
     if !recentSearchedSubs.contains(name) {
       recentSearchedSubs.insert(name, at: 0)
-      if recentSearchedSubs.count > 5 { recentSearchedSubs.removeLast() }
+      if recentSearchedSubs.count > 8 { recentSearchedSubs.removeLast() }
     } else {
       recentSearchedSubs.removeAll { $0 == name }
       recentSearchedSubs.insert(name, at: 0)

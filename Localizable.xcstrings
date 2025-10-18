@@ -963,6 +963,9 @@
         }
       }
     },
+    "Data Saver Mode" : {
+
+    },
     "Default Launch Feed" : {
       "localizations" : {
         "de" : {
@@ -3063,6 +3066,12 @@
           }
         }
       }
+    },
+    "Recent" : {
+
+    },
+    "Recent Searches" : {
+
     },
     "Refresh access token" : {
 

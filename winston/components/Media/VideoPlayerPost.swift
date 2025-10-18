@@ -9,7 +9,7 @@ import MediaPlayer
 // MARK: - AVPlayer Pool Manager
 class AVPlayerPool {
   static let shared = AVPlayerPool()
-  private let maxPoolSize = 3
+  private let maxPoolSize = 50
   private var availablePlayers: [AVPlayer] = []
   private var inUsePlayers: [String: AVPlayer] = [:] // Changed to dictionary for better tracking
   private let queue = DispatchQueue(label: "com.app.avplayerpool")
@@ -101,7 +101,7 @@ struct SharedVideo: Equatable {
     lhs.url == rhs.url && lhs.id == rhs.id
   }
   
-  var player: AVPlayer
+  var playerItem: AVPlayerItem
   var url: URL
   var id: String
   var size: CGSize
@@ -135,77 +135,12 @@ struct SharedVideo: Equatable {
     self.key = SharedVideo.cacheKey(url: url, size: size)
     
     if let asset = Caches.videos.get(key: self.key) {
-      let playerItem = AVPlayerItem(asset: asset)
-      self.player = AVPlayer(playerItem: playerItem)
+      self.playerItem = AVPlayerItem(asset: asset)
     } else {
-      if NetworkMonitor.shared.connectedToWifiIfDataSaver() {
-        self.player = AVPlayer(url: url)
-        if let asset = self.player.currentItem?.asset {
-          Caches.videos.addKeyValue(key: self.key, data: { asset }, expires: Date().dateByAdding(1, .day).date)
-        }
-      } else {
-        self.player = AVPlayer()
-      }
+      let playerItem = AVPlayerItem(url: self.url)
+      Caches.videos.addKeyValue(key: self.key, data: { playerItem.asset }, expires: Date().dateByAdding(1, .day).date)
+      self.playerItem = playerItem
     }
-    
-    // Configure player to not interfere with background audio
-    self.player.volume = 0.0
-    self.player.isMuted = true
-    self.player.automaticallyWaitsToMinimizeStalling = true
-    self.player.preventsDisplaySleepDuringVideoPlayback = false
-    
-    // Ensure player doesn't take over audio session
-    self.player.allowsExternalPlayback = false
-    
-    // For ambient videos, we shouldn't interfere with now playing at all
-  }
-  
-  func loadIfNeeded() {
-    guard !isCleanedUp, player.currentItem == nil else { return }
-    
-    Task(priority: .high) {
-      do {
-        let asset = AVURLAsset(url: self.url)
-        let _ = try await asset.load(.duration, .tracks, .isPlayable)
-        
-        Caches.videos.addKeyValue(key: self.key, data: { asset }, expires: Date().dateByAdding(1, .day).date)
-        
-        let playerItem = AVPlayerItem(asset: asset)
-        playerItem.preferredForwardBufferDuration = 5.0
-        
-        await MainActor.run {
-          guard !self.isCleanedUp else { return }
-          player.replaceCurrentItem(with: playerItem)
-          
-          // Ensure audio settings are maintained after item replacement
-          player.volume = 0.0
-          player.isMuted = true
-//          print("[VID] Asset loaded and player item set for: \(self.url)")
-        }
-        
-      } catch {
-        print("[VID] Failed to load asset: \(error)")
-      }
-    }
-  }
-  
-  func safeCleanup() {
-    guard !isCleanedUp else { return }
-    
-    Task { @MainActor in
-      // Pause and reset player before cleanup
-      player.pause()
-      player.seek(to: .zero) { _ in
-        // Replace with nil item to properly release resources
-        self.player.replaceCurrentItem(with: nil)
-      }
-    }
-  }
-  
-  mutating func cleanup() {
-    guard !isCleanedUp else { return }
-    isCleanedUp = true
-    safeCleanup()
   }
   
   private func clearNowPlayingInfo() {
@@ -220,7 +155,7 @@ struct SharedVideo: Equatable {
 
 struct VideoPlayerPost: View, Equatable {
   static func == (lhs: VideoPlayerPost, rhs: VideoPlayerPost) -> Bool {
-    lhs.url == rhs.url && lhs.sharedVideo == rhs.sharedVideo
+    lhs.url == rhs.url && lhs.sharedVideo == rhs.sharedVideo && lhs.player == rhs.player
   }
   
   weak var controller: UIViewController?
@@ -237,6 +172,7 @@ struct VideoPlayerPost: View, Equatable {
   @State private var hasAppeared = false
   @State private var observersAdded = false
   @State private var notificationTokens: [Any] = []
+  @State private var player: AVPlayer? = nil
   
   @State private var cancellables = Set<AnyCancellable>()
   
@@ -260,6 +196,37 @@ struct VideoPlayerPost: View, Equatable {
     self.maxMediaHeightScreenPercentage = maxMediaHeightScreenPercentage
   }
   
+  func updateVideo() {
+    guard let sharedVideo else { return }
+    
+    if player == nil {
+      let playerFromPool = AVPlayerPool.shared.getPlayer(for: sharedVideo.id)
+      DispatchQueue.main.async {
+        withAnimation {
+          self.player = playerFromPool
+        }
+      }
+    }
+    
+    DispatchQueue.main.async {
+      withAnimation {
+        player?.replaceCurrentItem(with: sharedVideo.playerItem)
+      }
+    }
+    
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+      attemptAutoplay()
+      setupAutoplayObservers()
+    }
+  }
+  
+  func returnPlayer() {
+    guard let sharedVideo else { return }
+
+    player = nil
+    AVPlayerPool.shared.returnPlayer(for: sharedVideo.id)
+  }
+  
   var safe: Double { getSafeArea().top + getSafeArea().bottom }
   
   var body: some View {
@@ -272,14 +239,18 @@ struct VideoPlayerPost: View, Equatable {
     if let sharedVideo = sharedVideo {
       ZStack {
         Group {
-          if !fullscreen {
-            VideoPlayer(player: sharedVideo.player)
+          if !fullscreen, let player = player {
+            VideoPlayer(player: player)
               .scaledToFill()
               .ignoresSafeArea()
+
           } else {
             Color.black
           }
         }
+        .opacity(player?.currentItem == nil ? 0 : 1)
+        .transition(.opacity) // Example animation
+        .animation(.easeIn(duration: 0.5), value: player?.currentItem != nil)
         .frame(width: compact ? scaledCompactModeThumbSize() : contentWidth, height: compact ? scaledCompactModeThumbSize() : CGFloat(finalHeight))
         .clipped()
         .fixedSize()
@@ -299,15 +270,15 @@ struct VideoPlayerPost: View, Equatable {
             }
         )
         
-        Image(systemName: "play.fill").foregroundColor(.white.opacity(0.75)).fontSize(32).shadow(color: .black.opacity(0.45), radius: 12, y: 8).opacity((autoPlayVideos && sharedVideo.player.currentItem != nil) || NetworkMonitor.isConnectedToWiFi() ? 0 : 1).allowsHitTesting(false)
+        Image(systemName: "play.fill").foregroundColor(.white.opacity(0.75)).fontSize(32).shadow(color: .black.opacity(0.45), radius: 12, y: 8).opacity((autoPlayVideos && player?.currentItem != nil) || NetworkMonitor.isConnectedToWiFi() ? 0 : 1).allowsHitTesting(false)
       }
       .onAppear {
         handleOnAppear()
       }
       .onChange(of: NetworkMonitor.shared.connectedToWifi) {
-        if NetworkMonitor.shared.connectedToWifi {
-          sharedVideo.loadIfNeeded()
-        }
+//        if NetworkMonitor.shared.connectedToWifi {
+//          sharedVideo.loadIfNeeded(player)
+//        }
       }
       .onChange(of: scenePhase) { _, newPhase in
         handleScenePhaseChange(newPhase)
@@ -328,7 +299,7 @@ struct VideoPlayerPost: View, Equatable {
         attemptAutoplay()
       }
       .fullScreenCover(isPresented: $fullscreen) {
-        FullScreenVP(sharedVideo: sharedVideo)
+        FullScreenVP(sharedVideo: sharedVideo, player: $player)
       }
     }
   }
@@ -342,33 +313,24 @@ struct VideoPlayerPost: View, Equatable {
       Task(priority: .background) { await markAsSeen?() }
     }
     
-    sharedVideo.loadIfNeeded()
     withAnimation {
       fullscreen = true
     }
   }
   
   private func handleOnAppear() {
-      guard let sharedVideo = sharedVideo, !hasAppeared else { return }
-      hasAppeared = true
+      guard let sharedVideo = sharedVideo else { return }
+      updateVideo()
       
       DispatchQueue.main.async {
           if loopVideos && !observersAdded {
               addObserver()
           }
           
-          if (sharedVideo.player.status == .failed) {
+          if (player?.status == .failed) {
               resetVideo?(sharedVideo)
-          } else if NetworkMonitor.shared.connectedToWifiIfDataSaver() {
-              sharedVideo.loadIfNeeded()
           }
-          
-          // Set up status observers for autoplay
-          setupAutoplayObservers()
-          
-          // Try immediate autoplay if ready
-          attemptAutoplay()
-          
+
           Nav.shared.currVideos[sharedVideo.id] = (Nav.shared.currVideos[sharedVideo.id] ?? 0) + 1
       }
   }
@@ -383,19 +345,19 @@ struct VideoPlayerPost: View, Equatable {
       let videoUrl = sharedVideo.url // Capture URL for logging
       
       // Observe player status changes
-      sharedVideo.player.publisher(for: \.status)
+      player?.publisher(for: \.status)
           .receive(on: DispatchQueue.main)
           .sink { [self] status in
-//              print("[VID] Player status changed to: \(status.rawValue) for \(videoUrl)")
+              print("[VID] Player status changed to: \(status.rawValue) for \(videoUrl)")
               attemptAutoplay()
           }
           .store(in: &cancellables)
       
       // Observe current item changes
-      sharedVideo.player.publisher(for: \.currentItem)
+      player?.publisher(for: \.currentItem)
           .receive(on: DispatchQueue.main)
           .sink { [self] item in
-//              print("[VID] Current item changed: \(item != nil) for \(videoUrl)")
+              print("[VID] Current item changed: \(item != nil) for \(videoUrl)")
               observeCurrentItemStatus()
               attemptAutoplay()
           }
@@ -409,7 +371,7 @@ struct VideoPlayerPost: View, Equatable {
   private func observeCurrentItemStatus() {
       guard let sharedVideo = sharedVideo else { return }
       
-      if let currentItem = sharedVideo.player.currentItem {
+      if let currentItem = player?.currentItem {
           currentItem.publisher(for: \.status)
               .receive(on: DispatchQueue.main)
               .sink { [self] status in
@@ -428,21 +390,20 @@ struct VideoPlayerPost: View, Equatable {
       
       // Check all conditions
       let shouldAutoplay = autoPlayVideos
-      let hasAppearedCheck = hasAppeared
       let notFullscreen = !fullscreen
-      let hasCurrentItem = sharedVideo.player.currentItem != nil
-      let playerReady = sharedVideo.player.status == .readyToPlay
-      let itemReady = sharedVideo.player.currentItem?.status == .readyToPlay
+      let hasCurrentItem = player?.currentItem != nil
+      let playerReady = player?.status == .readyToPlay
+      let itemReady = player?.currentItem?.status == .readyToPlay
       
 //      print("[VID] Autoplay check - shouldAutoplay: \(shouldAutoplay), notAlreadyPlayed: \(notAlreadyPlayed), hasAppeared: \(hasAppearedCheck), notFullscreen: \(notFullscreen), hasCurrentItem: \(hasCurrentItem), playerReady: \(playerReady), itemReady: \(itemReady ?? false)")
       
-      guard shouldAutoplay && hasAppearedCheck && notFullscreen else {
+      guard shouldAutoplay && notFullscreen else {
           return
       }
       
       if hasCurrentItem && playerReady && (itemReady == true) {
 //          print("[VID] ✅ Starting autoplay for: \(sharedVideo.url)")
-        sharedVideo.player.play()
+        player?.play()
         cleanupAutoplayObservers()
       }
   }
@@ -465,13 +426,14 @@ struct VideoPlayerPost: View, Equatable {
       if (Nav.shared.currVideos[sharedVideo.id] ?? 0) <= 1 {
           Task(priority: .background) {
               await MainActor.run {
-                  sharedVideo.player.seek(to: .zero)
-                  sharedVideo.player.pause()
+                  player?.seek(to: .zero)
+                  player?.pause()
               }
           }
       }
       
       Nav.shared.currVideos[sharedVideo.id] = (Nav.shared.currVideos[sharedVideo.id] ?? 0) > 1 ? Nav.shared.currVideos[sharedVideo.id]! - 1 : nil
+      returnPlayer()
   }
 
   // Update the handleScenePhaseChange method to reset autoplay on reactivation
@@ -488,8 +450,8 @@ struct VideoPlayerPost: View, Equatable {
               }
               
               // Check for failed players and reset if needed
-              if (sharedVideo.player.status == .failed ||
-                  sharedVideo.player.currentItem?.status == .failed) {
+              if (player?.status == .failed ||
+                  player?.currentItem?.status == .failed) {
                   print("[VID] Player failed or stuck, resetting video")
                   resetVideo?(sharedVideo)
               } else if autoPlayVideos && !fullscreen {
@@ -498,7 +460,7 @@ struct VideoPlayerPost: View, Equatable {
                   attemptAutoplay()
               }
           } else if newPhase == .inactive || newPhase == .background {
-              sharedVideo.player.pause()
+              player?.pause()
               
               // Deactivate audio session when going to background
               do {
@@ -511,35 +473,35 @@ struct VideoPlayerPost: View, Equatable {
   }
   
   private func handleFullscreenChange(_ val: Bool) {
-    guard let sharedVideo = sharedVideo else { return }
+    guard let sharedVideo = sharedVideo, let player = player else { return }
     
     DispatchQueue.main.async {
       if !firstFullscreen {
         firstFullscreen = true
-        sharedVideo.player.isMuted = muteVideos
-        sharedVideo.player.play()
+        player.isMuted = muteVideos
+        player.play()
       }
       
       if !val {
         // Exiting fullscreen - ensure video layer refreshes properly
         if !autoPlayVideos {
-          sharedVideo.player.seek(to: .zero)
-          sharedVideo.player.pause()
+          player.seek(to: .zero)
+          player.pause()
           firstFullscreen = false
         } else {
           // Force a brief pause/play to refresh the video layer
-          let currentTime = sharedVideo.player.currentTime()
-          sharedVideo.player.pause()
+          let currentTime = player.currentTime()
+          player.pause()
           
           DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            sharedVideo.player.play()
+            player.play()
             // Ensure we return to the correct position
-            sharedVideo.player.seek(to: currentTime)
+            player.seek(to: currentTime)
           }
         }
       }
       
-      sharedVideo.player.volume = val ? 1.0 : 0.0
+      player.volume = val ? 1.0 : 0.0
     }
   }
   
@@ -553,15 +515,15 @@ struct VideoPlayerPost: View, Equatable {
       DispatchQueue.main.async {
         let token1 = NotificationCenter.default.addObserver(
           forName: .AVPlayerItemDidPlayToEndTime,
-          object: sharedVideo.player.currentItem,
+          object: player?.currentItem,
           queue: .main) { [sharedVideo] notif in
-            sharedVideo.player.seek(to: .zero)
-            sharedVideo.player.play()
+            player?.seek(to: .zero)
+            player?.play()
           }
         
         let token2 = NotificationCenter.default.addObserver(
           forName: .AVPlayerItemFailedToPlayToEndTime,
-          object: sharedVideo.player.currentItem,
+          object: player?.currentItem,
           queue: .main) { [sharedVideo, resetVideo] notif in
             resetVideo?(sharedVideo)
           }
@@ -586,8 +548,11 @@ struct VideoPlayerPost: View, Equatable {
 
 struct FullScreenVP: View {
   var sharedVideo: SharedVideo
+  @Binding var player: AVPlayer?
+
   @Environment(\.dismiss) private var dismiss
   @Environment(\.scenePhase) private var scenePhase // Add scene phase monitoring
+  
   @State private var cancelDrag: Bool?
   @State private var drag: CGSize = .zero
   @State private var isDismissing = false
@@ -598,7 +563,7 @@ struct FullScreenVP: View {
     let interpolate = interpolatorBuilder([0, 100], value: abs(drag.height))
     
     GeometryReader { geometry in
-      VideoPlayer(player: sharedVideo.player)
+      VideoPlayer(player: player)
         .frame(width: geometry.size.width, height: geometry.size.height)
         .scaleEffect(interpolate([1, 0.9], true))
         .offset(cancelDrag ?? false ? .zero : drag)
@@ -671,13 +636,13 @@ struct FullScreenVP: View {
       
       // Resume playback if it was playing and user wants audio
       if !isDismissing {
-        sharedVideo.player.play()
+        player?.play()
       }
       
     case .inactive, .background:
       isActive = false
       // Pause but maintain fullscreen state
-      sharedVideo.player.pause()
+      player?.pause()
       
     @unknown default:
       break
@@ -694,9 +659,9 @@ struct FullScreenVP: View {
       rootViewController.setNeedsUpdateOfSupportedInterfaceOrientations()
     }
     
-    sharedVideo.player.isMuted = videoDefSettings.mute
-    sharedVideo.player.volume = videoDefSettings.mute ? 0.0 : 1.0
-    sharedVideo.player.play()
+    player?.isMuted = videoDefSettings.mute
+    player?.volume = videoDefSettings.mute ? 0.0 : 1.0
+    player?.play()
   }
   
   private func performDismissal() {
@@ -704,8 +669,8 @@ struct FullScreenVP: View {
     isActive = false
     
     // Reset player audio settings
-    sharedVideo.player.volume = 0.0
-    sharedVideo.player.isMuted = true
+    player?.volume = 0.0
+    player?.isMuted = true
     
     resetToPortrait()
     
