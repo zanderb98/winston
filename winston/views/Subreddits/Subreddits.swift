@@ -32,7 +32,7 @@ struct Subreddits: View, Equatable {
     self.currentCredentialID = currentCredentialID
     self._firstDestination = firstDestination
     self.loaded = loaded
-    self._subreddits = FetchRequest<CachedSub>(sortDescriptors: [NSSortDescriptor(key: "display_name", ascending: true)], predicate: NSPredicate(format: "winstonCredentialID == %@", currentCredentialID as CVarArg), animation: .default)
+    self._subreddits = FetchRequest<CachedSub>(sortDescriptors: [NSSortDescriptor(key: "display_name", ascending: true)], animation: .default)
     self._multis = FetchRequest<CachedMulti>(sortDescriptors: [NSSortDescriptor(key: "display_name", ascending: true)], predicate: NSPredicate(format: "winstonCredentialID == %@", currentCredentialID as CVarArg), animation: .default)
   }
   
@@ -47,7 +47,7 @@ struct Subreddits: View, Equatable {
   @Environment(\.useTheme) private var selectedTheme
   
   var sections: [String:[CachedSub]] {
-    return Dictionary(grouping: subreddits.filter({ $0.user_is_subscriber })) { sub in
+    return Dictionary(grouping: subreddits.filter({ $0.user_is_subscriber && $0.winstonCredentialID == currentCredentialID })) { sub in
       return String((sub.display_name ?? "a").first!.uppercased())
     }
   }
@@ -138,7 +138,7 @@ struct Subreddits: View, Equatable {
         Group {
                     
           if searchText.debounced != "" {
-            let foundSubs = Array(subreddits.filter {  ($0.user_is_subscriber || localFavorites.contains($0.name ?? "")) && ($0.display_name ?? "").lowercased().starts(with: searchText.debounced.lowercased()) })
+            let foundSubs = Array(subreddits.filter {  (($0.user_is_subscriber && $0.winstonCredentialID == currentCredentialID) || localFavorites.contains($0.name ?? "")) && ($0.display_name ?? "").lowercased().starts(with: searchText.debounced.lowercased()) })
             
             if foundSubs.count > 0 {
               Section("My subs") {
@@ -205,7 +205,7 @@ struct Subreddits: View, Equatable {
             if appearanceDefSettings.disableAlphabetLettersSectionsInSubsList {
               
               Section("Subs") {
-                let subs = Array(subreddits.filter({ $0.user_is_subscriber }).sorted(by: { x, y in (x.display_name?.lowercased() ?? "a") < (y.display_name?.lowercased() ?? "a") }).enumerated())
+                let subs = Array(subreddits.filter({ $0.user_is_subscriber && $0.winstonCredentialID == currentCredentialID }).sorted(by: { x, y in (x.display_name?.lowercased() ?? "a") < (y.display_name?.lowercased() ?? "a") }).enumerated())
                 ForEach(subs, id: \.self.element) { i, cachedSub in
                   let sub = Subreddit(data: SubredditData(entity: cachedSub))
                   SubItem(isActive: Router.NavDest.reddit(.subFeed(sub)) == firstDestination, sub: sub, cachedSub: cachedSub, action: selectSub, localFavState: $localFavState)
