@@ -100,7 +100,7 @@ struct RadialMenuTriggerButton: UIViewRepresentable {
         
         @objc fileprivate func handleTap(_ sender: UITapGestureRecognizer) {
             if case .ended = sender.state {
-                self.parent.onTap?()
+                self.parent.transmitter.showing = false
             }
         }
         

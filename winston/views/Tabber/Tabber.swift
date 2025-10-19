@@ -20,6 +20,10 @@ struct Tabber: View, Equatable {
     @Environment(\.useTheme) private var currentTheme
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.setTabBarHeight) private var setTabBarHeight
+    @Environment(\.accountSwitcherTransmitter) private var transmitter
+    @State private var medium = UIImpactFeedbackGenerator(style: .soft)
+  
+
     @Default(.AppearanceDefSettings) private var appearanceDefSettings
     
     @State var sharedTheme: ThemeData? = nil
@@ -53,7 +57,15 @@ struct Tabber: View, Equatable {
     }
     
     var body: some View {
-        TabView(selection: $nav.activeTab.onUpdate { newTab in if nav.activeTab == newTab { nav.resetStack() } }) {
+      TabView(selection: $nav.activeTab.onUpdate { newTab in
+        if nav.activeTab == newTab {
+          nav.resetStack()
+
+          if newTab == .me {
+            transmitter.showing = true
+          }
+        }
+      }) {
             Tab("Posts", systemImage: "doc.text.image", value: Nav.TabIdentifier.posts) {
                 WithCredentialOnly(credential: redditCredentialsManager.selectedCredential) {
                     SubredditsStack(router: nav[.posts])
@@ -85,7 +97,22 @@ struct Tabber: View, Equatable {
             
         }
         .searchToolbarBehavior(.minimize)
-        .overlay(TabBarOverlay(meTabTap: meTabTap), alignment: .bottom)
+//        .overlay(TabBarOverlay(meTabTap: meTabTap), alignment: .bottom)
+        .if(nav.activeTab == .me) {
+            view in view.overlay(TabBarOverlay(meTabTap: meTabTap), alignment: .bottom)
+
+//          view in view.overlay(RadialMenuTriggerButton(transmitter: transmitter, onTap: meTabTap, onPressStarted: {
+//            medium.prepare()
+//            medium.impactOccurred()
+//            if !transmitter.showing && transmitter.positionInfo != nil { transmitter.showing = true }
+//          }, onPressEnded: {
+//            if transmitter.showing {
+//              transmitter.showing = false
+//              return
+//            }
+//            transmitter.reset()
+//          }))
+        }
         .openFromWebListener()
         .themeFetchingListener() // From WinstonAPI
         .newCredentialListener()
