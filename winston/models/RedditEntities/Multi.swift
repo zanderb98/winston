@@ -29,14 +29,15 @@ extension Multi {
     return nil
   }
   
-  func fetchPosts(sort: SubListingSortOption = .best, after: String? = nil, contentWidth: CGFloat = .screenW) async -> ([RedditEntityType]?, String?)? {
+    func fetchPosts(sort: SubListingSortOption = .best, after: String? = nil, searchText: String? = nil, contentWidth: CGFloat = .screenW) async -> ([RedditEntityType]?, String?)? {
     if let data = data {
-      if let response = await RedditAPI.shared.fetchMultiPosts(path: data.path, sort: sort, after: after), let data = response.0 {
+      if let response = await RedditAPI.shared.fetchMultiPosts(path: data.path, sort: sort, searchText: searchText, after: after), let data = response.0 {
         return (Post.initMultiple(datas: data.compactMap { $0.data }, contentWidth: contentWidth).map { .post($0) }, response.1)
       }
     }
     return nil
   }
+    
   
   func delete() async -> Bool? {
     if let data = data {

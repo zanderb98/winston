@@ -10,10 +10,10 @@ import Alamofire
 import Defaults
 
 extension RedditAPI {
-  func fetchMultiPosts(path: String, sort: SubListingSortOption = .best, after: String? = nil) async -> ([ListingChild<PostData>]?, String?)? {
+    func fetchMultiPosts(path: String, sort: SubListingSortOption = .new, searchText: String? = nil, after: String? = nil) async -> ([ListingChild<PostData>]?, String?)? {
     let limit = Defaults[.SubredditFeedDefSettings].chunkLoadSize
     let params = FetchSubsPayload(limit: limit, after: after)
-    switch await self.doRequest("\(RedditAPI.redditApiURLBase)\(path).json", method: .get, params: params, paramsLocation: .queryString, decodable: Listing<PostData>.self) {
+    switch await self.doRequest("\(RedditAPI.redditApiURLBase)\(path)/\(getSortAndSearchSuffix(sort, searchText))", method: .get, params: params, paramsLocation: .queryString, decodable: Listing<PostData>.self) {
     case .success(let data):
       return (data.data?.children, data.data?.after)
     case .failure(let error):

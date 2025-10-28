@@ -43,7 +43,6 @@ extension RedditAPI {
   }
   
   private func buildSubID(_ id: String, _ sort: SubListingSortOption?, _ after: String?, _ searchText: String? = nil) -> String {
-    let appendedFileType = ".json"
     var subID = ""
   
     if id != savedKeyword {
@@ -51,44 +50,52 @@ extension RedditAPI {
     } else if let username = RedditAPI.shared.me?.data?.name {
       subID = "/user/\(username)/saved"
     } else {
-      print("Sub ID failed to build. Invalid logic... content will fail to load.")
+      print("Sub ID failed to build. Invalid logic... content will fail to loa d.")
     }
     
     subID = !subID.hasSuffix("/") ? "\(subID)/" : subID
     
-    if searchText != nil {
-      subID += "search\(appendedFileType)"
-    } else {
-      if let sort = sort {
-        switch sort {
-        case .best:
-          subID += "best\(appendedFileType)"
-        case .hot:
-          subID += "hot\(appendedFileType)"
-        case .new:
-          subID += "new\(appendedFileType)"
-        case .top(let topSortOption):
-          subID += "top\(appendedFileType)"
-          subID += buildTopSortQuery(topSortOption)
-        case .controversial:
-          subID += "controversial\(appendedFileType)"
-        }
-      }
-    }
-    
-    if let searchText = searchText {
-      subID += subID.contains("?") ? "&q=\(searchText)" : "?q=\(searchText)"
-      subID += "&restrict_sr=on"
-      
-      // Add preferred sort to search url
-      subID += "&sort=\(Defaults[.SubredditFeedDefSettings].preferredSearchSort)"
-    }
+    subID += getSortAndSearchSuffix(sort, searchText)
     
     if let after = after {
       subID += subID.contains("?") ? "&after=\(after)" : "?after=\(after)"
     }
     
     return subID
+  }
+    
+    func getSortAndSearchSuffix(_ sort: SubListingSortOption? = nil, _ searchText: String? = nil) -> String {
+      var suffix = ""
+      
+      if searchText != nil {
+        suffix += "search.json"
+      } else {
+        if let sort = sort {
+          switch sort {
+          case .best:
+              suffix += "best.json"
+          case .hot:
+              suffix += "hot.json"
+          case .new:
+              suffix += "new.json"
+          case .top(let topSortOption):
+              suffix += "top.json"
+              suffix += buildTopSortQuery(topSortOption)
+          case .controversial:
+              suffix += "controversial.json"
+          }
+        }
+      }
+      
+      if let searchText = searchText {
+          suffix += suffix.contains("?") ? "&q=\(searchText)" : "?q=\(searchText)"
+          suffix += "&restrict_sr=on"
+        
+        // Add preferred sort to search url
+          suffix += "&sort=\(Defaults[.SubredditFeedDefSettings].preferredSearchSort)"
+      }
+      
+      return suffix
   }
     
   private func buildTopSortQuery(_ topSortOption: SubListingSortOption.TopListingSortOption) -> String {

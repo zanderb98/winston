@@ -42,7 +42,7 @@ struct RedditListingFeed<Header: View, Footer: View, S: Sorting>: View {
       return "chart.line.uptrend.xyaxis.circle.fill"
     }
     
-    return "questionmark.cirlce.fill"
+    return "questionmark.circle.fill"
   }
   
   func getSubColor(_ subId: String) -> Color {
@@ -126,7 +126,7 @@ struct RedditListingFeed<Header: View, Footer: View, S: Sorting>: View {
   
   func sortUpdated(opt: S) {
     itemsManager.sorting = opt
-    feedDefSettings.subredditSorts[self.subreddit?.id ?? ""] = opt as? SubListingSortOption
+    feedDefSettings.subredditSorts[self.subreddit?.id ?? feedId] = opt as? SubListingSortOption
   }
   
   @ViewBuilder
@@ -388,7 +388,7 @@ struct RedditListingFeed<Header: View, Footer: View, S: Sorting>: View {
             }
           }
         }
-        .floatingMenu(subId: subreddit?.id, subName: subreddit?.data?.name, filters: shallowCachedFilters, selectedFilter: $itemsManager.selectedFilter, customFilter: $customFilter, refresh: refresh)
+        .floatingMenu(subId: subreddit?.id ?? feedId, subName: subreddit?.data?.name ?? feedId, filters: shallowCachedFilters, selectedFilter: $itemsManager.selectedFilter, customFilter: $customFilter, refresh: refresh)
         //    .onChange(of: itemsManager.selectedFilter) { searchEnabled = $1?.type != .custom }
         .refreshable { await refresh() }
         .onChange(of: generalDefSettings.redditCredentialSelectedID) { _, _ in
@@ -430,7 +430,7 @@ struct RedditListingFeed<Header: View, Footer: View, S: Sorting>: View {
           appearedPosts = []
         }
         .sheet(item: $customFilter) { custom in
-          CustomFilterView(filter: custom, subId: subreddit?.id ?? "")
+          CustomFilterView(filter: custom, subId: subreddit?.id ?? feedId)
         }
       }
     }

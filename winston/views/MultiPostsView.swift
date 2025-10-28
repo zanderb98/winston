@@ -34,13 +34,14 @@ struct MultiPostsView: View {
   
   func caller(_ lastElementId: String?, _ sorting: SubListingSortOption?, _ searchQuery: String?, _ flair: String?) async -> ([RedditEntityType]?, String?)? {
     
-      if let sorting, let result = await multi.fetchPosts(sort: sorting, after: lastElementId, contentWidth: contentWidth), let newPosts = result.0 {
+      if let sorting, let result = await multi.fetchPosts(sort: sorting, after: lastElementId, searchText: searchQuery, contentWidth: contentWidth), let newPosts = result.0 {
         return (newPosts, result.1)
     }
     return nil
   }
   
   var body: some View {
-    RedditListingFeed(feedId: multi.id, showSubInPosts: true, title: "\(subFeedSettings.showPrefixOnFeedTitle ? "m/" : "")\(multi.data?.name ?? "Multi")", theme: selectedTheme.postLinks.bg, fetch: caller, initialSorting: subFeedSettings.preferredSort, disableSearch: true)
+    let initialSort = subFeedSettings.subredditSorts[multi.id] != nil ? subFeedSettings.subredditSorts[multi.id] : subFeedSettings.preferredSort
+    RedditListingFeed(feedId: multi.id, showSubInPosts: true, title: "\(subFeedSettings.showPrefixOnFeedTitle ? "m/" : "")\(multi.data?.name ?? "Multi")", theme: selectedTheme.postLinks.bg, fetch: caller, initialSorting: initialSort, disableSearch: false)
   }
 }

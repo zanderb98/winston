@@ -117,22 +117,6 @@ struct Subreddits: View, Equatable {
             localFavState = localFavorites
             recentSubs = recentSearchedSubs
           }
-          
-          if multis.count > 0 {
-            Section("Multis") {
-              ScrollView(.horizontal) {
-                HStack(spacing: 16) {
-                  ForEach(multis) { multi in
-                    MultiLink(multi: Multi(data: MultiData(entity: multi)))
-                  }
-                }
-                .padding(.horizontal, 16)
-              }
-            }
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-          }
-          
         }
         
         Group {
@@ -198,6 +182,14 @@ struct Subreddits: View, Equatable {
                         }
                       }
                   }
+                }
+              }
+            }
+            
+            if multis.count > 0 {
+              Section("Multis") {
+                ForEach(multis) { multi in
+                  MultiLink(multi: Multi(data: MultiData(entity: multi)))
                 }
               }
             }

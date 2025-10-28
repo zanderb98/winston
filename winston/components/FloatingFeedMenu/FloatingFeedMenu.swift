@@ -269,12 +269,10 @@ struct FloatingFeedMenu: View, Equatable {
 
 
 extension View {
-  func floatingMenu(subId: String?, subName: String?, filters: [ShallowCachedFilter], selectedFilter: Binding<ShallowCachedFilter?>, customFilter: Binding<ShallowCachedFilter?>, refresh: @escaping (() async -> Void)) -> some View {
+  func floatingMenu(subId: String, subName: String?, filters: [ShallowCachedFilter], selectedFilter: Binding<ShallowCachedFilter?>, customFilter: Binding<ShallowCachedFilter?>, refresh: @escaping (() async -> Void)) -> some View {
     self.overlay(alignment: .bottomTrailing) {
-        if let subId {
-          FloatingFeedMenu(subId: subId, subName: subName, filters: filters, selectedFilter: selectedFilter, customFilter: customFilter, refresh: refresh)
-        }
-      }
+      FloatingFeedMenu(subId: subId, subName: subName, filters: filters, selectedFilter: selectedFilter, customFilter: customFilter, refresh: refresh)
+    }
   }
 }
 

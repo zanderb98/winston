@@ -29,6 +29,7 @@ struct winstonApp: App {
           ImagePipeline.shared = ImagePipeline(configuration: .withDataCache(name: "lo.cafe.winston.datacache", sizeLimit: 1024 * 1024 * 300))
         }
     }
+    .windowResizability(.automatic)
   }
   
   func addQuickActions() {
