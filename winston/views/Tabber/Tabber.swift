@@ -100,18 +100,6 @@ struct Tabber: View, Equatable {
 //        .overlay(TabBarOverlay(meTabTap: meTabTap), alignment: .bottom)
         .if(nav.activeTab == .me) {
             view in view.overlay(TabBarOverlay(meTabTap: meTabTap), alignment: .bottom)
-
-//          view in view.overlay(RadialMenuTriggerButton(transmitter: transmitter, onTap: meTabTap, onPressStarted: {
-//            medium.prepare()
-//            medium.impactOccurred()
-//            if !transmitter.showing && transmitter.positionInfo != nil { transmitter.showing = true }
-//          }, onPressEnded: {
-//            if transmitter.showing {
-//              transmitter.showing = false
-//              return
-//            }
-//            transmitter.reset()
-//          }))
         }
         .openFromWebListener()
         .themeFetchingListener() // From WinstonAPI

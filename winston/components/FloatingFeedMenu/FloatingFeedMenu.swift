@@ -140,10 +140,14 @@ struct FloatingFeedMenu: View, Equatable {
                   .increaseHitboxOf(actionsSize, by: 1.125, shape: Circle(), disable: false)
                   .onTapGesture {
                     Hap.shared.play(intensity: 0.75, sharpness: 0.9)
-                    if Nav.shared.activeTab == .saved {
-                      Nav.shared.activeTab = .posts
-                    } else {
-                      Nav.shared.activeRouter.goBack()
+                    DispatchQueue.main.async {
+                      withAnimation {
+                        if (Nav.shared.activeTab == .saved || Nav.shared.activeTab == .me) && Nav.shared.activeRouter.isAtRoot {
+                          Nav.shared.activeTab = .posts
+                        } else {
+                          Nav.shared.activeRouter.goBack()
+                        }
+                      }
                     }
                   }
                 Image(systemName: "arrow.clockwise")

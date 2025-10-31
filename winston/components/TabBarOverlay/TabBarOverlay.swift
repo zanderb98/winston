@@ -14,7 +14,7 @@ struct TabBarOverlay: View {
   
   @State private var bottomSafeArea = getSafeArea().bottom
   @State private var update = 0
-  private let tabBarHeight = 100.0
+  private let tabBarHeight = 50.0
   
   var body: some View {
   GeometryReader { geo in
@@ -22,7 +22,13 @@ struct TabBarOverlay: View {
     HStack(spacing: 0) {
       ForEach(Nav.TabIdentifier.allCases, id: \.rawValue) { tab in
         if tab == .me {
-          AccountSwitcherTrigger(onTap: { Nav.shared.activeTab = .me }) {
+          AccountSwitcherTrigger(onTap: {
+              DispatchQueue.main.async {
+                  withAnimation {
+                      Nav.shared.activeTab = .me
+                  }
+              }
+          }) {
             Color.clear
               .frame(width: .screenW / 5, height: max(0, (tabBarHeight)))
               .background(Color.hitbox)
@@ -33,7 +39,13 @@ struct TabBarOverlay: View {
             .frame(width: .screenW / 5, height: max(0, (tabBarHeight)))
             .background(Color.hitbox)
             .contentShape(Rectangle())
-            .overlay { SimpleTappableView { Nav.shared.activeTab = tab } }
+            .overlay { SimpleTappableView {
+                DispatchQueue.main.async {
+                    withAnimation {
+                        Nav.shared.activeTab = tab
+                    }
+                }
+            } }
         }
       }
     }
