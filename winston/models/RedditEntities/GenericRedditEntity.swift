@@ -137,7 +137,7 @@ enum RedditEntityType: Hashable, Equatable, Identifiable {
   case post(Post)
   case subreddit(Subreddit)
   case multi(Multi)
-  case comment(Comment)
+case comment(Comment)
   case user(User)
   case message(Message)
   

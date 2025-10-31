@@ -73,12 +73,14 @@ extension Comment {
   func setupWinstonData() {
     self.winstonData = .init()
     
-    if let url = checkForGif() {
-      self.winstonData?.gifURL = url
-      
-      if let imageSource = CGImageSourceCreateWithURL(url as CFURL, nil) {
-        if let imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as Dictionary? {
-          self.winstonData?.gifSize = .init(width: imageProperties[kCGImagePropertyPixelWidth] as! CGFloat, height: imageProperties[kCGImagePropertyPixelHeight] as! CGFloat)
+    Task {
+      if let url = checkForGif() {
+        self.winstonData?.gifURL = url
+        
+        if let imageSource = CGImageSourceCreateWithURL(url as CFURL, nil) {
+          if let imageProperties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as Dictionary? {
+            self.winstonData?.gifSize = .init(width: imageProperties[kCGImagePropertyPixelWidth] as! CGFloat, height: imageProperties[kCGImagePropertyPixelHeight] as! CGFloat)
+          }
         }
       }
     }

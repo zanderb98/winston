@@ -59,6 +59,8 @@ extension View {
             AppearancePanel()
           case .seenPosts:
               SeenPostsPanel()
+          case .apiStats:
+              APIRequestStatsView()
           case .credentials:
             CredentialsPanel()
           case .about:

@@ -68,13 +68,9 @@
 		CE5985BE2DA73F81005523D1 /* SavedContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE5985BD2DA73F75005523D1 /* SavedContainer.swift */; };
 		CE5C10242E04E46600FE2167 /* winston-icon.icon in Resources */ = {isa = PBXBuildFile; fileRef = CE5C10232E04E46600FE2167 /* winston-icon.icon */; };
 		CE7FD54E2DC7E41500890F14 /* SwiftyGif in Frameworks */ = {isa = PBXBuildFile; productRef = CE7FD54D2DC7E41500890F14 /* SwiftyGif */; };
-		CE8DEDDB2E44D1DB00B7E180 /* winstonicon3.icon in Resources */ = {isa = PBXBuildFile; fileRef = CE8DEDDA2E44D1DB00B7E180 /* winstonicon3.icon */; };
 		CE9537802E18485D00691099 /* SeenSubreddit.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE95377F2E18485000691099 /* SeenSubreddit.swift */; };
 		CE9537832E1ABFCB00691099 /* SeenPostsPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE9537822E1ABFCB00691099 /* SeenPostsPanel.swift */; };
 		CEA42B2E2DEA815200F43254 /* NetworkMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEA42B2D2DEA814C00F43254 /* NetworkMonitor.swift */; };
-		CEADFC7E2EB69D310019B6A0 /* APIRequestStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEADFC7D2EB69D310019B6A0 /* APIRequestStatsView.swift */; };
-		CEADFC7F2EB69D310019B6A0 /* APIRequestLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEADFC7C2EB69D310019B6A0 /* APIRequestLogger.swift */; };
-		CEADFC812EB69DA00019B6A0 /* APIRequestLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEADFC802EB69DA00019B6A0 /* APIRequestLog.swift */; };
 		CEE627872DE4A84B0095E481 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = CEE627862DE4A84B0095E481 /* FirebaseAnalytics */; };
 		CEE627892DE4A84B0095E481 /* FirebaseAnalyticsOnDeviceConversion in Frameworks */ = {isa = PBXBuildFile; productRef = CEE627882DE4A84B0095E481 /* FirebaseAnalyticsOnDeviceConversion */; };
 		CEE6278B2DE4A84B0095E481 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = CEE6278A2DE4A84B0095E481 /* FirebaseCrashlytics */; };
@@ -681,13 +677,9 @@
 		CE4C201A2E088018002E06CB /* GeneratedSummaryView.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = GeneratedSummaryView.swift; sourceTree = "<group>"; tabWidth = 2; };
 		CE5985BD2DA73F75005523D1 /* SavedContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedContainer.swift; sourceTree = "<group>"; };
 		CE5C10232E04E46600FE2167 /* winston-icon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "winston-icon.icon"; sourceTree = "<group>"; };
-		CE8DEDDA2E44D1DB00B7E180 /* winstonicon3.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = winstonicon3.icon; sourceTree = "<group>"; };
 		CE95377F2E18485000691099 /* SeenSubreddit.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = SeenSubreddit.swift; sourceTree = "<group>"; tabWidth = 2; };
 		CE9537822E1ABFCB00691099 /* SeenPostsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeenPostsPanel.swift; sourceTree = "<group>"; };
 		CEA42B2D2DEA814C00F43254 /* NetworkMonitor.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = NetworkMonitor.swift; sourceTree = "<group>"; tabWidth = 2; };
-		CEADFC7C2EB69D310019B6A0 /* APIRequestLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIRequestLogger.swift; path = winston/components/RedditListingFeed/APIRequestLogger.swift; sourceTree = SOURCE_ROOT; };
-		CEADFC7D2EB69D310019B6A0 /* APIRequestStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIRequestStatsView.swift; path = winston/components/RedditListingFeed/APIRequestStatsView.swift; sourceTree = SOURCE_ROOT; };
-		CEADFC802EB69DA00019B6A0 /* APIRequestLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = APIRequestLog.swift; path = winston/models/RedditAPI/APIRequestLog.swift; sourceTree = SOURCE_ROOT; };
 		CEE6278C2DE4A8620095E481 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		EC051C2A2ACAEFC500E9D9ED /* QuickLookThumbnailing.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuickLookThumbnailing.framework; path = System/Library/Frameworks/QuickLookThumbnailing.framework; sourceTree = SDKROOT; };
 		EC051C462ACAF2DC00E9D9ED /* themeFileIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = themeFileIcon.png; sourceTree = "<group>"; };
@@ -1294,7 +1286,6 @@
 		EC08541C2A4BFEF100E88389 /* RedditAPI */ = {
 			isa = PBXGroup;
 			children = (
-				CEADFC802EB69DA00019B6A0 /* APIRequestLog.swift */,
 				EC31880C2A92A30900CB3738 /* multis */,
 				ECA30A202A60B18B00BB19D1 /* message */,
 				ECA30A1F2A60B16200BB19D1 /* comment */,
@@ -1701,7 +1692,6 @@
 				EC593AEE2A47ACA1002D6454 /* Views */,
 				EC593ADB2A4673B3002D6454 /* Assets.xcassets */,
 				CE5C10232E04E46600FE2167 /* winston-icon.icon */,
-				CE8DEDDA2E44D1DB00B7E180 /* winstonicon3.icon */,
 				ECFA479E2BAC88BC00E864EB /* winston for Reddit.storekit */,
 				EC593AED2A4796C1002D6454 /* winston.entitlements */,
 				ECEFC26C2A5E0E440003C6C4 /* Info.plist */,
@@ -2160,8 +2150,6 @@
 				ECEE87B52B63672F0042032B /* FeedItemsManager.swift */,
 				EC8EF59B2B606E37009E51D2 /* RedditListingFeed.swift */,
 				EC9D2A012BCB852200D5795E /* RedditEntityView.swift */,
-				CEADFC7C2EB69D310019B6A0 /* APIRequestLogger.swift */,
-				CEADFC7D2EB69D310019B6A0 /* APIRequestStatsView.swift */,
 			);
 			path = RedditListingFeed;
 			sourceTree = "<group>";
@@ -2827,7 +2815,6 @@
 				ECD77F842BB0070D006382F7 /* supernova.ahap in Resources */,
 				ECAD01B62BC8738B008C18C0 /* book-opening.json in Resources */,
 				EC13D4452BB06CF300741E39 /* blackhole.ahap in Resources */,
-				CE8DEDDB2E44D1DB00B7E180 /* winstonicon3.icon in Resources */,
 				ECD77F7D2BAFECE1006382F7 /* supernova.mp4 in Resources */,
 				EC051C472ACAF2DC00E9D9ED /* themeFileIcon.png in Resources */,
 				CEE6278E2DE4A8620095E481 /* GoogleService-Info.plist in Resources */,
@@ -3390,14 +3377,11 @@
 				ECE449712A67610A00E2A3B7 /* VotesPopover.swift in Sources */,
 				65E45A702AFD3E48007DBBFC /* whatsNew.swift in Sources */,
 				ECE449812A689C8A00E2A3B7 /* subscribe.swift in Sources */,
-				CEADFC7E2EB69D310019B6A0 /* APIRequestStatsView.swift in Sources */,
-				CEADFC7F2EB69D310019B6A0 /* APIRequestLogger.swift in Sources */,
 				EC3188322A94770700CB3738 /* GalleryThumb.swift in Sources */,
 				EC4C7CB22B2DA2030007A4DA /* FloatingFeedMenu.swift in Sources */,
 				EC7DBDF32A86C92200D7C123 /* PostSwipePanel.swift in Sources */,
 				EC7FBE2F2B411C810082FA44 /* AppContent.swift in Sources */,
 				EC9D29FE2BCB803100D5795E /* CollectionView.swift in Sources */,
-				CEADFC812EB69DA00019B6A0 /* APIRequestLog.swift in Sources */,
 				BB0D15292B069A9700668448 /* getItemId.swift in Sources */,
 				EC0854432A4D6A4800E88389 /* MasterButton.swift in Sources */,
 				EC31DB1A2B12F11C00A777ED /* Water.metal in Sources */,
@@ -3579,7 +3563,7 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "";
 				"ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES[sdk=*]" = "iconExplode iconPeak iconSimpleFaceBlack iconSimpleFaceBlue iconSimpleEyesBlack iconSimpleEyesBlue iconSide";
-				ASSETCATALOG_COMPILER_APPICON_NAME = winstonicon3;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "winston-icon";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
@@ -3627,7 +3611,7 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "";
 				"ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES[sdk=*]" = "iconExplode iconPeak iconSimpleFaceBlack iconSimpleFaceBlue iconSimpleEyesBlack iconSimpleEyesBlue iconSide";
-				ASSETCATALOG_COMPILER_APPICON_NAME = winstonicon3;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "winston-icon";
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;

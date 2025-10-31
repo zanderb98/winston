@@ -11,6 +11,7 @@ import Alamofire
 import SwiftUI
 import Defaults
 import Combine
+import SwiftData
 
 @Observable
 class RedditAPI {
@@ -22,6 +23,10 @@ class RedditAPI {
     
     var lastAuthState: String?
     var me: User?
+    
+    // Optional SwiftData ModelContext for logging
+    var modelContext: ModelContext?
+    func setModelContext(_ context: ModelContext) { self.modelContext = context }
     
     // This is a replacement for getRequestHeader. We need to replace every instance of the former by this one
     func fetchRequestHeaders(
@@ -55,6 +60,76 @@ class RedditAPI {
     private let reqModifier: Session.RequestModifier = { urlReq in
         urlReq.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
     }
+
+    // Normalize endpoint labels to group by route rather than specific IDs
+    private func normalizedEndpointLabel(from url: String, method: HTTPMethod) -> String {
+        // Strip query string
+        let base = url.components(separatedBy: "?").first ?? url
+        // Attempt to map known Reddit routes to templates
+        // Examples:
+        // - https://oauth.reddit.com/r/{sub}/comments/{postId}/... -> /r/:sub/comments/:post
+        // - https://oauth.reddit.com/r/{sub}/{sort} -> /r/:sub/:sort
+        // - https://oauth.reddit.com/api/info -> /api/info
+        // - https://oauth.reddit.com/api/vote -> /api/vote
+        // - https://oauth.reddit.com/user/{name}/about -> /user/:name/about
+        // - https://oauth.reddit.com/api/search_reddit_names -> /api/search_reddit_names
+        // - https://oauth.reddit.com/_ -> /subreddits/mine
+
+        func path(from full: String) -> String {
+            if let u = URL(string: full), let host = u.host {
+                var path = u.path
+                // Normalize double slashes
+                while path.contains("//") { path = path.replacingOccurrences(of: "//", with: "/") }
+                // If host is oauth.reddit.com or www.reddit.com, keep path; otherwise include host to avoid collisions
+                if host.contains("reddit.com") { return path }
+                return "//" + host + path
+            }
+            return full
+        }
+
+        var p = path(from: base)
+
+        // Replace UUID-like or base36 id segments with placeholders
+        // Reddit IDs are often base36; we approximate by replacing long alnum segments
+        let components = p.split(separator: "/").map(String.init)
+        var normalized: [String] = []
+        var i = 0
+        while i < components.count {
+            let seg = components[i]
+            switch seg.lowercased() {
+            case "r":
+                normalized.append("r"); i += 1
+                if i < components.count { normalized.append(":sub"); i += 1 }
+            case "comments":
+                normalized.append("comments"); i += 1
+                if i < components.count { normalized.append(":post"); i += 1 }
+            case "user":
+                normalized.append("user"); i += 1
+                if i < components.count { normalized.append(":user"); i += 1 }
+            default:
+                // Known API endpoints
+                if seg == "api" || seg == "message" || seg == "subreddits" || seg == "by_id" {
+                    normalized.append(seg); i += 1
+                } else if seg.count >= 6 && seg.range(of: "^[A-Za-z0-9_\\-]+$", options: .regularExpression) != nil {
+                    // Likely identifier or sort; map common sorts, else placeholder
+                    let commonSorts = ["hot","new","top","best","rising","controversial"]
+                    if commonSorts.contains(seg) {
+                        normalized.append(":sort")
+                    } else {
+                        normalized.append(":id")
+                    }
+                    i += 1
+                } else {
+                    normalized.append(seg); i += 1
+                }
+            }
+        }
+
+        // Join back into a path and prefix method for clarity
+        var label = "/" + normalized.joined(separator: "/").trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        if label.hasSuffix("/") { label.removeLast() }
+        return label
+    }
     
     func doRequest<D: Decodable, P: Encodable>(
         _ url: String,
@@ -67,10 +142,21 @@ class RedditAPI {
         attempt: Int = 0,
         saveToken: Bool = true
     ) async -> Result<D, AFError> {
-        return await self._doRequest(authenticated: authenticated, altCredential: altCredential, saveToken: saveToken) { headers in
+        let startedAt = Date()
+        let endpointLabel = normalizedEndpointLabel(from: url, method: method)
+        let methodLabel = method.rawValue
+
+        let result = await self._doRequest(authenticated: authenticated, altCredential: altCredential, saveToken: saveToken) { headers in
             let req = AF.request(url, method: method, parameters: params, encoder: URLEncodedFormParameterEncoder(destination: paramsLocation), headers: headers, requestModifier: reqModifier).validate()
             return await req.serializingDecodable(decodable).response.result
         }
+        switch result {
+        case .success(_):
+            APIRequestLogger.shared.log(endpoint: endpointLabel, fullEndpoint: url.replacingOccurrences(of: RedditAPI.redditApiURLBase, with: ""), method: methodLabel, startedAt: startedAt, endedAt: Date(), status: .success, code: nil, errorDescription: nil, context: modelContext)
+        case .failure(let err):
+            APIRequestLogger.shared.log(endpoint: endpointLabel, fullEndpoint: url.replacingOccurrences(of: RedditAPI.redditApiURLBase, with: ""), method: methodLabel, startedAt: startedAt, endedAt: Date(), status: .failure, code: err.responseCode, errorDescription: err.errorDescription, context: modelContext)
+        }
+        return result
     }
     
     func doRequest<D: Decodable>(
@@ -82,10 +168,21 @@ class RedditAPI {
         attempt: Int = 0,
         saveToken: Bool = true
     ) async -> Result<D, AFError> {
-        return await self._doRequest(authenticated: authenticated, altCredential: altCredential, saveToken: saveToken) { headers in
+        let startedAt = Date()
+        let endpointLabel = normalizedEndpointLabel(from: url, method: method)
+        let methodLabel = method.rawValue
+
+        let result = await self._doRequest(authenticated: authenticated, altCredential: altCredential, saveToken: saveToken) { headers in
             let req = AF.request(url, method: method, parameters: ["raw_json": 1], headers: headers, requestModifier: reqModifier).validate()
             return await req.serializingDecodable(decodable).response.result
         }
+        switch result {
+        case .success(_):
+            APIRequestLogger.shared.log(endpoint: endpointLabel, fullEndpoint: url.replacingOccurrences(of: RedditAPI.redditApiURLBase, with: ""), method: methodLabel, startedAt: startedAt, endedAt: Date(), status: .success, code: nil, errorDescription: nil, context: modelContext)
+        case .failure(let err):
+            APIRequestLogger.shared.log(endpoint: endpointLabel, fullEndpoint: url.replacingOccurrences(of: RedditAPI.redditApiURLBase, with: ""), method: methodLabel, startedAt: startedAt, endedAt: Date(), status: .failure, code: err.responseCode, errorDescription: err.errorDescription, context: modelContext)
+        }
+        return result
     }
     
     func doRequest<P: Encodable>(
@@ -98,10 +195,21 @@ class RedditAPI {
         attempt: Int = 0,
         saveToken: Bool = true
     ) async -> Result<String, AFError> {
-        return await self._doRequest(authenticated: authenticated, altCredential: altCredential, saveToken: saveToken) { headers in
+        let startedAt = Date()
+        let endpointLabel = normalizedEndpointLabel(from: url, method: method)
+        let methodLabel = method.rawValue
+
+        let result = await self._doRequest(authenticated: authenticated, altCredential: altCredential, saveToken: saveToken) { headers in
             let req = AF.request(url, method: method, parameters: params, encoder: URLEncodedFormParameterEncoder(destination: paramsLocation), headers: headers, requestModifier: reqModifier).validate()
             return await req.serializingString().result
         }
+        switch result {
+        case .success(_):
+            APIRequestLogger.shared.log(endpoint: endpointLabel, fullEndpoint: url.replacingOccurrences(of: RedditAPI.redditApiURLBase, with: ""), method: methodLabel, startedAt: startedAt, endedAt: Date(), status: .success, code: nil, errorDescription: nil, context: modelContext)
+        case .failure(let err):
+            APIRequestLogger.shared.log(endpoint: endpointLabel, fullEndpoint: url.replacingOccurrences(of: RedditAPI.redditApiURLBase, with: ""), method: methodLabel, startedAt: startedAt, endedAt: Date(), status: .failure, code: err.responseCode, errorDescription: err.errorDescription, context: modelContext)
+        }
+        return result
     }
     
     func doRequest(
@@ -113,10 +221,21 @@ class RedditAPI {
         attempt: Int = 0,
         saveToken: Bool = true
     ) async -> Result<String, AFError> {
-        return await self._doRequest(authenticated: authenticated, altCredential: altCredential, saveToken: saveToken) { headers in
+        let startedAt = Date()
+        let endpointLabel = normalizedEndpointLabel(from: url, method: method)
+        let methodLabel = method.rawValue
+
+        let result = await self._doRequest(authenticated: authenticated, altCredential: altCredential, saveToken: saveToken) { headers in
             let req = AF.request(url, method: method, parameters: ["raw_json": 1], headers: headers).validate()
             return await req.serializingString().result
         }
+        switch result {
+        case .success(_):
+            APIRequestLogger.shared.log(endpoint: endpointLabel, fullEndpoint: url.replacingOccurrences(of: RedditAPI.redditApiURLBase, with: ""), method: methodLabel, startedAt: startedAt, endedAt: Date(), status: .success, code: nil, errorDescription: nil, context: modelContext)
+        case .failure(let err):
+            APIRequestLogger.shared.log(endpoint: endpointLabel, fullEndpoint: url.replacingOccurrences(of: RedditAPI.redditApiURLBase, with: ""), method: methodLabel, startedAt: startedAt, endedAt: Date(), status: .failure, code: err.responseCode, errorDescription: err.errorDescription, context: modelContext)
+        }
+        return result
     }
     
     func _doRequest<D: Decodable>(

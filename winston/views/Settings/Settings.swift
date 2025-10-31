@@ -37,6 +37,7 @@ struct Settings: View {
             WSNavigationLink(.setting(.behavior), "Behavior", icon: "arrow.triangle.turn.up.right.diamond.fill")
             WSNavigationLink(.setting(.appearance), "Appearance", icon: "theatermask.and.paintbrush.fill")
               WSNavigationLink(.setting(.themes), "Themes", icon: "paintbrush.fill")
+              WSNavigationLink(.setting(.apiStats), "API Requests", icon: "chart.bar.yaxis")
               WSNavigationLink(.setting(.seenPosts), "Seen Post Stats", icon: "eye.fill")
             WSNavigationLink(.setting(.credentials), "Credentials", icon: "key.horizontal.fill")
           }

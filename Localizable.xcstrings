@@ -333,6 +333,9 @@
         }
       }
     },
+    "%lldms" : {
+
+    },
     "+%lld" : {
       "localizations" : {
         "de" : {
@@ -519,6 +522,15 @@
       }
     },
     "Any questions" : {
+
+    },
+    "API Requests" : {
+
+    },
+    "API requests will appear here once logged" : {
+
+    },
+    "API Response Times" : {
 
     },
     "App icon" : {
@@ -754,6 +766,9 @@
 
     },
     "Clear Seen Posts" : {
+
+    },
+    "Clear Selection" : {
 
     },
     "Click the button and follow the video" : {
@@ -1260,6 +1275,9 @@
         }
       }
     },
+    "Duration (ms)" : {
+
+    },
     "EASY" : {
 
     },
@@ -1270,6 +1288,9 @@
 
     },
     "Enabling the extension" : {
+
+    },
+    "Endpoint" : {
 
     },
     "Enter a subreddit" : {
@@ -1908,6 +1929,9 @@
         }
       }
     },
+    "Individual request durations" : {
+
+    },
     "Information" : {
       "localizations" : {
         "de" : {
@@ -2437,6 +2461,9 @@
         }
       }
     },
+    "ms avg" : {
+
+    },
     "Multis" : {
       "localizations" : {
         "de" : {
@@ -2535,6 +2562,12 @@
       }
     },
     "No credential" : {
+
+    },
+    "No Data Available" : {
+
+    },
+    "No Data for Selected Endpoints" : {
 
     },
     "No posts" : {
@@ -2751,6 +2784,9 @@
           }
         }
       }
+    },
+    "Overview" : {
+
     },
     "Paste here the app ID" : {
       "localizations" : {
@@ -3082,6 +3118,12 @@
     "Repeat tutorial" : {
 
     },
+    "Request" : {
+
+    },
+    "Requests" : {
+
+    },
     "Reset preferences" : {
       "localizations" : {
         "de" : {
@@ -3349,6 +3391,9 @@
           }
         }
       }
+    },
+    "Show All Endpoints" : {
+
     },
     "Show Author" : {
       "localizations" : {
@@ -3682,6 +3727,9 @@
           }
         }
       }
+    },
+    "Summary" : {
+
     },
     "Support our Work!" : {
       "localizations" : {
@@ -4099,6 +4147,9 @@
 
     },
     "Total Subreddits" : {
+
+    },
+    "Try selecting different endpoints" : {
 
     },
     "u/%@" : {

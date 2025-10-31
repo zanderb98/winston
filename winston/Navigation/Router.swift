@@ -126,7 +126,7 @@ class Router: Hashable, Equatable, Identifiable {
     }
     enum Setting: String, Hashable, Codable, Identifiable {
       var id: String { self.rawValue }
-      case behavior, seenPosts, appearance, credentials, about, commentSwipe, postSwipe, accessibility, faq, general, themes, filteredSubreddits, appIcon, themeStore
+      case behavior, seenPosts, apiStats, appearance, credentials, about, commentSwipe, postSwipe, accessibility, faq, general, themes, filteredSubreddits, appIcon, themeStore
     }
   }
   

@@ -11,6 +11,7 @@ import Defaults
 struct AppContent: View {
     @StateObject private var themeStore = ThemeStoreAPI()
     @Environment(\.scenePhase) var scenePhase
+    @Environment(\.modelContext) private var modelContext
     
     //  @Default(.ThemesDefSettings) private var themesDefSettings
     @Default(.GeneralDefSettings) private var generalDefSettings
@@ -42,6 +43,9 @@ struct AppContent: View {
         .task {
             IAPManager.shared.startListeningForUpdates()
             await IAPManager.shared.fetchAllProducts()
+        }
+        .task {
+            RedditAPI.shared.setModelContext(modelContext)
         }
         .onAppear {
             Defaults[.ThemesDefSettings].themesPresets = Defaults[.ThemesDefSettings].themesPresets.filter { $0.id != "default" }
