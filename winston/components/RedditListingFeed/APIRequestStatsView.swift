@@ -126,15 +126,106 @@ struct APIRollingAverageChart: View {
     let entries: [APIRequestLog]
     @Binding var selectedEndpoints: [String]
     
+    // Time window selection
+    enum TimeWindow: CaseIterable {
+        case fiveMinutes
+        case fifteenMinutes
+        case thirtyMinutes
+        case oneHour
+        case oneDay
+
+        var duration: TimeInterval {
+            switch self {
+            case .fiveMinutes: return 5 * 60
+            case .fifteenMinutes: return 15 * 60
+            case .thirtyMinutes: return 30 * 60
+            case .oneHour: return 60 * 60
+            case .oneDay: return 24 * 60 * 60
+            }
+        }
+
+        var label: String {
+            switch self {
+            case .fiveMinutes: return "5m"
+            case .fifteenMinutes: return "15m"
+            case .thirtyMinutes: return "30m"
+            case .oneHour: return "1h"
+            case .oneDay: return "1d"
+            }
+        }
+    }
+
+    @State private var timeWindow: TimeWindow = .fifteenMinutes
+
+    // Limit window to selected time window
+    private var windowStart: Date { Date().addingTimeInterval(-timeWindow.duration) }
+    private var recentEntries: [APIRequestLog] {
+        entries.filter { $0.startedAt >= windowStart }
+    }
+
+    // Dynamic x-axis bounds: at most selected window, but scale to earliest available
+    private var xLowerBound: Date? {
+        guard let earliest = recentEntries.min(by: { $0.startedAt < $1.startedAt })?.startedAt else { return nil }
+        return max(earliest, windowStart)
+    }
+    private var xUpperBound: Date { Date() }
+
+    // Base palette and deterministic expansion to ensure unique colors per endpoint
+    private let basePalette: [Color] = [
+        .blue, .red, .green, .orange, .purple, .pink, .teal, .brown, .indigo, .mint
+    ]
+
+    private var uniqueEndpoints: [String] {
+        // Use endpoints present in the current chart window, stable sorted
+        let set = Set(recentEntries.map { $0.endpoint })
+        return Array(set).sorted()
+    }
+
+    private var endpointColors: [String: Color] {
+        var mapping: [String: Color] = [:]
+        let count = uniqueEndpoints.count
+        if count <= basePalette.count {
+            for (idx, ep) in uniqueEndpoints.enumerated() {
+                mapping[ep] = basePalette[idx]
+            }
+        } else {
+            // Generate additional distinct hues if needed
+            for (idx, ep) in uniqueEndpoints.enumerated() {
+                if idx < basePalette.count {
+                    mapping[ep] = basePalette[idx]
+                } else {
+                    // Distribute hues around the color wheel
+                    let fraction = Double(idx - basePalette.count + 1) / Double(count - basePalette.count + 1)
+                    mapping[ep] = Color(hue: fraction, saturation: 0.75, brightness: 0.9)
+                }
+            }
+        }
+        return mapping
+    }
+
+    private func color(for endpoint: String) -> Color {
+        endpointColors[endpoint] ?? .blue
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("API Response Times")
-                .font(.title2)
-                .fontWeight(.bold)
             
-            Text("Individual request durations")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                Text("API Response Times")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                
+                Text(timeWindow.label)
+                    .font(.footnote)
+                    .fontWeight(.bold)
+                    .foregroundStyle(.secondary)
+                    .onTapGesture {
+                        cycleTimeWindow()
+                    }
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel("Time window")
+                    .accessibilityValue(timeWindow.label)
+            }
             
             if filteredChartData.isEmpty {
                 ContentUnavailableView(
@@ -147,13 +238,12 @@ struct APIRollingAverageChart: View {
                 Chart {
                     ForEach(filteredChartData) { series in
                         ForEach(series.data) { point in
-                            LineMark(
-                                x: .value("Request", point.index),
-                                y: .value("Duration (ms)", point.duration)
+                            PointMark(
+                                x: .value("Time", point.time),
+                                y: .value("Duration (s)", point.duration / 1000.0)
                             )
                             .foregroundStyle(by: .value("Endpoint", series.endpoint))
-                            .lineStyle(StrokeStyle(lineWidth: 2.5))
-                            .interpolationMethod(.catmullRom)
+                            .symbolSize(35) 
                         }
                     }
                 }
@@ -167,13 +257,15 @@ struct APIRollingAverageChart: View {
                     AxisMarks(position: .leading) { value in
                         AxisGridLine()
                         AxisValueLabel {
-                            if let duration = value.as(Double.self) {
-                                Text("\(Int(duration))ms")
+                            if let seconds = value.as(Double.self) {
+                                Text(String(format: "%.1fs", seconds))
                             }
                         }
                     }
                 }
-                .chartLegend(position: .bottom, alignment: .leading, spacing: 12)
+                .chartLegend(.hidden)
+                .chartForegroundStyleScale(domain: uniqueEndpoints, range: uniqueEndpoints.map { color(for: $0) })
+                .chartXScale(domain: (xLowerBound ?? windowStart)...xUpperBound)
                 .frame(height: 300)
                 .padding(.vertical, 8)
             }
@@ -188,8 +280,8 @@ struct APIRollingAverageChart: View {
     private var summaryView: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Summary")
-                    .font(.headline)
+//                Text("Summary")
+//                    .font(.headline)
                 
                 Spacer()
                 
@@ -237,22 +329,27 @@ struct APIRollingAverageChart: View {
                     .foregroundStyle(isSelected(stat.endpoint) ? .primary : .secondary)
                     .lineLimit(1)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text("\(Int(stat.avgDuration))")
+                    let seconds = stat.avgDuration / 1000.0
+                    Text(String(format: "%.1f", seconds))
                         .font(.title3)
                         .fontWeight(.semibold)
                         .foregroundStyle(.primary)
-                    Text("ms avg")
+                    Text("s avg")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
+                Rectangle()
+                    .fill(color(for: stat.endpoint))
+                    .frame(height: 3)
+                    .opacity(0.7)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(8)
-            .background(isSelected(stat.endpoint) ? Color.blue.opacity(0.15) : Color(.secondarySystemBackground))
+            .background(isSelected(stat.endpoint) ? color(for: stat.endpoint).opacity(0.15) : Color(.secondarySystemBackground))
             .cornerRadius(6)
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
-                    .strokeBorder(isSelected(stat.endpoint) ? Color.blue : Color.clear, lineWidth: 2)
+                    .strokeBorder(isSelected(stat.endpoint) ? color(for: stat.endpoint) : Color.clear, lineWidth: 2)
             )
         }
         .buttonStyle(.plain)
@@ -272,10 +369,21 @@ struct APIRollingAverageChart: View {
         }
     }
     
+    // MARK: - Time Window Controls
+    private func cycleTimeWindow() {
+        let all = TimeWindow.allCases
+        if let idx = all.firstIndex(of: timeWindow) {
+            let next = all.index(after: idx)
+            timeWindow = next < all.endIndex ? all[next] : all.first!
+        } else {
+            timeWindow = .fifteenMinutes
+        }
+    }
+    
     // MARK: - Data Processing
     
     private var chartData: [EndpointSeries] {
-        let grouped = Dictionary(grouping: entries.sorted(by: { $0.startedAt < $1.startedAt }), by: { $0.endpoint })
+        let grouped = Dictionary(grouping: recentEntries.sorted(by: { $0.startedAt < $1.startedAt }), by: { $0.endpoint })
         
         return grouped.compactMap { endpoint, logs in
             guard !logs.isEmpty else { return nil }
@@ -285,6 +393,7 @@ struct APIRollingAverageChart: View {
             let points = logs.enumerated().map { index, log in
                 ChartDataPoint(
                     index: index + 1,
+                    time: log.startedAt,
                     duration: log.durationMs
                 )
             }
@@ -302,7 +411,7 @@ struct APIRollingAverageChart: View {
     }
     
     private var endpointStats: [EndpointStat] {
-        let grouped = Dictionary(grouping: entries, by: { $0.endpoint })
+        let grouped = Dictionary(grouping: recentEntries, by: { $0.endpoint })
         
         return grouped.map { endpoint, logs in
             let avgDuration = logs.map(\.durationMs).reduce(0, +) / Double(logs.count)
@@ -324,6 +433,7 @@ struct EndpointSeries: Identifiable {
 struct ChartDataPoint: Identifiable {
     let id = UUID()
     let index: Int
+    let time: Date
     let duration: Double
 }
 
