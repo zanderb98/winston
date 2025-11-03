@@ -245,7 +245,9 @@ extension Post {
   
   func toggleSeen(_ seen: Bool? = nil, optimistic: Bool = false) async -> Void {
     let context = PersistenceController.shared.primaryBGContext
+
     if (self.data?.winstonSeen ?? false) == seen { return }
+
     if optimistic {
       let prev = self.data?.winstonSeen ?? false
       let new = seen == nil ? !prev : seen
@@ -255,28 +257,37 @@ extension Post {
         }
       }
     }
-    let fetchRequest = NSFetchRequest<SeenPost>(entityName: "SeenPost")
-    if let results = (await context.perform(schedule: .enqueued) { try? context.fetch(fetchRequest) }) {
-      await context.perform(schedule: .enqueued) {
-        let foundPost = results.first(where: { obj in obj.postID == self.id })
-        
-        if let foundPost = foundPost {
-          if seen == nil || seen == false {
-            context.delete(foundPost)
-            if !optimistic {
-              self.data?.winstonSeen = false
-            }
-          }
-        } else if seen == nil || seen == true {
-          let newSeenPost = SeenPost(context: context)
-          newSeenPost.postID = self.id
-          try? context.save()
-          if !optimistic {
-            DispatchQueue.main.async {
-              withAnimation {
-                self.data?.winstonSeen = true
-              }
-            }
+
+    await context.perform {
+      // Determine the final desired state based on current data and input
+      let prev = self.data?.winstonSeen ?? false
+      let desired = seen == nil ? !prev : (seen ?? false)
+
+      // Build fetch request locally to avoid capturing non-Sendable values across closures
+      let fetchRequest = NSFetchRequest<SeenPost>(entityName: "SeenPost")
+      fetchRequest.predicate = NSPredicate(format: "postID == %@", self.id)
+      fetchRequest.fetchLimit = 1
+
+      let results = (try? context.fetch(fetchRequest)) ?? []
+      if let found = results.first {
+        if desired == false {
+          context.delete(found)
+        }
+      } else if desired == true {
+        let newSeenPost = SeenPost(context: context)
+        newSeenPost.postID = self.id
+      }
+
+      do {
+        try context.save()
+      } catch {
+        print("[SEEN] Failed to toggle seen state for post: \(self.id) with error: \(error)")
+      }
+
+      if !optimistic {
+        DispatchQueue.main.async {
+          withAnimation {
+            self.data?.winstonSeen = desired
           }
         }
       }
@@ -297,36 +308,37 @@ extension Post {
     // Update the Defaults value with the modified array
     Defaults[.filteredSubreddits] = filteredSubreddits
   }
-  
+
   func saveCommentsCount(numComments: Int) async -> Void {
     let context = PersistenceController.shared.primaryBGContext
-    
-    let fetchRequest = NSFetchRequest<SeenPost>(entityName: "SeenPost")
-    if let results = (await context.perform(schedule: .enqueued) { try? context.fetch(fetchRequest) }) {
-      await context.perform(schedule: .enqueued) {
-        let foundPost = results.first(where: { obj in obj.postID == self.id })
-        
-        if let seenPost = foundPost {
-          seenPost.numComments = Int32(numComments)
-          try? context.save()
-          
-          DispatchQueue.main.async {
-            withAnimation {
-              self.winstonData?.seenCommentsCount = numComments
-            }
-          }
-        } else {
-          let newSeenPost = SeenPost(context: context)
-          newSeenPost.postID = self.id
-          newSeenPost.numComments = Int32(numComments)
-          try? context.save()
-          
-          DispatchQueue.main.async {
-            withAnimation {
-              self.data?.winstonSeen = true
-              self.winstonData?.seenCommentsCount = numComments
-            }
-          }
+
+    await context.perform {
+      let fetchRequest = NSFetchRequest<SeenPost>(entityName: "SeenPost")
+      fetchRequest.predicate = NSPredicate(format: "postID == %@", self.id)
+      fetchRequest.fetchLimit = 1
+
+      let results = (try? context.fetch(fetchRequest)) ?? []
+      let seenPost: SeenPost
+      if let existing = results.first {
+        seenPost = existing
+      } else {
+        let created = SeenPost(context: context)
+        created.postID = self.id
+        seenPost = created
+      }
+
+      seenPost.numComments = Int32(numComments)
+
+      do {
+        try context.save()
+      } catch {
+        print("[SEEN-COMMENTS-COUNT] Failed to save numComments=\(numComments) for post: \(self.id) with error: \(error)")
+      }
+
+      DispatchQueue.main.async {
+        withAnimation {
+          self.data?.winstonSeen = true
+          self.winstonData?.seenCommentsCount = numComments
         }
       }
     }
@@ -335,35 +347,40 @@ extension Post {
   func saveSeenComments(comments: ListingData<CommentData>?) async -> Void {
     let context = PersistenceController.shared.primaryBGContext
     let newComments = self.getCommentIds(comments)
-    
-    let fetchRequest = NSFetchRequest<SeenPost>(entityName: "SeenPost")
-    if let results = (await context.perform(schedule: .enqueued) { try? context.fetch(fetchRequest) }) {
-      await context.perform(schedule: .enqueued) {
-        let foundPost = results.first(where: { obj in obj.postID == self.id })
-        
-        if let seenPost = foundPost {
-          var seenComments = seenPost.seenComments ?? ""
-          newComments.forEach { id in
-            if (!seenComments.contains(id)) {
-              seenComments += "\(seenComments.isEmpty ? "" : ",")\(id)"
-            }
-          }
-          
-          let finalSeen = seenComments
-          seenPost.seenComments = finalSeen
 
-          do {
-            try context.save()
-//            print("[SEEN-COMMENTS] Saved \(newComments.count) seen comments. Total seen comments: \(finalSeen.numberOfOccurrences(of: ",") + 1)")
-          } catch {
-            print("[SEEN-COMMENTS] Failed to save \(newComments.count) seen comments")
-          }
-          
-          DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            withAnimation {
-              self.winstonData?.seenComments = finalSeen
-            }
-          }
+    if newComments.isEmpty { return }
+
+    await context.perform {
+      let fetchRequest = NSFetchRequest<SeenPost>(entityName: "SeenPost")
+      fetchRequest.predicate = NSPredicate(format: "postID == %@", self.id)
+      fetchRequest.fetchLimit = 1
+
+      let results = (try? context.fetch(fetchRequest)) ?? []
+      let seenPost: SeenPost
+      if let existing = results.first {
+        seenPost = existing
+      } else {
+        let created = SeenPost(context: context)
+        created.postID = self.id
+        seenPost = created
+      }
+
+      let existingCSV = seenPost.seenComments ?? ""
+      var seenSet: Set<String> = existingCSV.isEmpty ? [] : Set(existingCSV.split(separator: ",").map { String($0) })
+      seenSet.formUnion(newComments)
+
+      let finalSeen = seenSet.sorted().joined(separator: ",")
+      seenPost.seenComments = finalSeen
+
+      do {
+        try context.save()
+      } catch {
+        print("[SEEN-COMMENTS] Failed to save seen comments (count: \(newComments.count)) with error: \(error)")
+      }
+
+      DispatchQueue.main.async {
+        withAnimation {
+          self.winstonData?.seenComments = finalSeen
         }
       }
     }
@@ -371,36 +388,41 @@ extension Post {
   
   func saveMoreComments(comments: [Comment]) async -> Void {
     let context = PersistenceController.shared.primaryBGContext
-    
-    let fetchRequest = NSFetchRequest<SeenPost>(entityName: "SeenPost")
-    if let results = (await context.perform(schedule: .enqueued) { try? context.fetch(fetchRequest) }) {
-      await context.perform(schedule: .enqueued) {
-        let foundPost = results.first(where: { obj in obj.postID == self.id })
-        
-        if let seenPost = foundPost {
-          var seenComments = seenPost.seenComments ?? ""
-          let newComments = self.getMoreCommentIds(comments)
-          
-          newComments.forEach { id in
-            if (!seenComments.contains(id)) {
-              seenComments += "\(seenComments.isEmpty ? "" : ",")\(id)"
-            }
-          }
-          
-          let finalSeen = seenComments
-          seenPost.seenComments = finalSeen
-            
-          do {
-            try context.save()
-          } catch {
-            print("[SEEN-COMMENTS] Failed to save \(comments.count) more seen comments")
-          }
-          
-          DispatchQueue.main.async {
-            withAnimation {
-              self.winstonData?.seenComments = finalSeen
-            }
-          }
+
+    let newComments = self.getMoreCommentIds(comments)
+    if newComments.isEmpty { return }
+
+    await context.perform {
+      let fetchRequest = NSFetchRequest<SeenPost>(entityName: "SeenPost")
+      fetchRequest.predicate = NSPredicate(format: "postID == %@", self.id)
+      fetchRequest.fetchLimit = 1
+
+      let results = (try? context.fetch(fetchRequest)) ?? []
+      let seenPost: SeenPost
+      if let existing = results.first {
+        seenPost = existing
+      } else {
+        let created = SeenPost(context: context)
+        created.postID = self.id
+        seenPost = created
+      }
+
+      let existingCSV = seenPost.seenComments ?? ""
+      var seenSet: Set<String> = existingCSV.isEmpty ? [] : Set(existingCSV.split(separator: ",").map { String($0) })
+      seenSet.formUnion(newComments)
+
+      let finalSeen = seenSet.sorted().joined(separator: ",")
+      seenPost.seenComments = finalSeen
+
+      do {
+        try context.save()
+      } catch {
+        print("[SEEN-COMMENTS] Failed to save more seen comments (count: \(newComments.count)) with error: \(error)")
+      }
+
+      DispatchQueue.main.async {
+        withAnimation {
+          self.winstonData?.seenComments = finalSeen
         }
       }
     }
@@ -528,7 +550,9 @@ extension Post {
             return nil
           case .second(let actualData):
             if let data = actualData.data, let children = data.children {
-              await saveSeenComments(comments: data)
+              Task {
+                await saveSeenComments(comments: data)
+              }
               
               let dataArr = children.compactMap { $0 }
               let comments = Comment.initMultiple(datas: dataArr)
@@ -598,6 +622,4 @@ extension Post {
     }
   }
 }
-
-
 

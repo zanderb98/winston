@@ -187,22 +187,29 @@ extension Comment {
   }
   
   static func initMultiple(datas: [ListingChild<T>], parent: [GenericRedditEntity<T, B>]? = nil) -> [Comment] {
-    let context = PersistenceController.shared.primaryBGContext
-    let fetchRequest = NSFetchRequest<CollapsedComment>(entityName: "CollapsedComment")
-    if let results = (context.performAndWait { try? context.fetch(fetchRequest) }) {
-      return datas.compactMap { x in
-        context.performAndWait {
-          if let data = x.data {
-            let isCollapsed = results.contains(where: { $0.commentID == data.id })
-            let newComment = Comment.init(data: data, kind: x.kind, parent: parent)
-            newComment.data?.collapsed = isCollapsed
-            return newComment
-          }
-          return nil
-        }
+//    let context = PersistenceController.shared.primaryBGContext
+//    let fetchRequest = NSFetchRequest<CollapsedComment>(entityName: "CollapsedComment")
+//    if let results = (context.performAndWait { try? context.fetch(fetchRequest) }) {
+//      return datas.compactMap { x in
+//        context.performAndWait {
+//          if let data = x.data {
+//            let isCollapsed = results.contains(where: { $0.commentID == data.id })
+//            let newComment = Comment.init(data: data, kind: x.kind, parent: parent)
+//            newComment.data?.collapsed = isCollapsed
+//            return newComment
+//          }
+//          return nil
+//        }
+//      }
+//    }
+//    return []
+    
+    return datas.compactMap { x in
+      if let data = x.data {
+        return Comment.init(data: data, kind: x.kind, parent: parent)
       }
+      return nil
     }
-    return []
   }
   
   func toggleCollapsed(_ collapsed: Bool? = nil, optimistic: Bool = false) {
@@ -215,37 +222,37 @@ extension Comment {
       }
     }
 
-    let context = PersistenceController.shared.primaryBGContext
-
-    context.performAndWait {
-      let fetchRequest = NSFetchRequest<CollapsedComment>(entityName: "CollapsedComment")
-      fetchRequest.predicate = NSPredicate(format: "commentID == %@", id as CVarArg)
-
-      do {
-        let results = try context.fetch(fetchRequest)
-
-        if let foundPost = results.first {
-          if collapsed == nil || collapsed == false {
-            context.delete(foundPost)
-            try? context.save()
-            if !optimistic {
-              data?.collapsed = false
-            }
-          }
-        } else if collapsed == nil || collapsed == true {
-          let newCollapsedComment = CollapsedComment(context: context)
-          newCollapsedComment.commentID = id
-
-          try? context.save()
-
-          if !optimistic {
-            data?.collapsed = true
-          }
-        }
-      } catch {
-        print("Error fetching or updating data in Core Data: \(error)")
-      }
-    }    
+//    let context = PersistenceController.shared.primaryBGContext
+//
+//    context.performAndWait {
+//      let fetchRequest = NSFetchRequest<CollapsedComment>(entityName: "CollapsedComment")
+//      fetchRequest.predicate = NSPredicate(format: "commentID == %@", id as CVarArg)
+//
+//      do {
+//        let results = try context.fetch(fetchRequest)
+//
+//        if let foundPost = results.first {
+//          if collapsed == nil || collapsed == false {
+//            context.delete(foundPost)
+//            try? context.save()
+//            if !optimistic {
+//              data?.collapsed = false
+//            }
+//          }
+//        } else if collapsed == nil || collapsed == true {
+//          let newCollapsedComment = CollapsedComment(context: context)
+//          newCollapsedComment.commentID = id
+//
+//          try? context.save()
+//
+//          if !optimistic {
+//            data?.collapsed = true
+//          }
+//        }
+//      } catch {
+//        print("Error fetching or updating data in Core Data: \(error)")
+//      }
+//    }    
   }
   
   func loadChildren(parent: CommentParentElement, postFullname: String, avatarSize: Double, post: Post?, index: Int) async {

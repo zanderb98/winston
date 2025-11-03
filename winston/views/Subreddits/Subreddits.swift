@@ -253,20 +253,20 @@ struct Subreddits: View, Equatable {
       }
 //      .toolbar {
 //        ToolbarItem(placement: .navigationBarTrailing) {
-//          EditButton()
+//          Editutton()
 //        }
 //      }
       .overlay(
           AlphabetJumper(letters: sections.keys.sorted(), searchFocused: $searchFocused, proxy: proxy)
       , alignment: .trailing)
       .refreshable {
-        Task(priority: .background) {
-          await updatePostsInBox(RedditAPI.shared, force: true)
-        }
+//        Task(priority: .background) {
+//          await updatePostsInBox(RedditAPI.shared, force: true)
+//        }
         Task(priority: .background) {
           _ = await RedditAPI.shared.fetchMyMultis()
         }
-        _ = await RedditAPI.shared.fetchSubsAndSyncCoreData()
+        _ = await RedditAPI.shared.fetchSubsAndSyncCoreData(forceRefresh: true)
       }
       .navigationTitle("Subs")
     }

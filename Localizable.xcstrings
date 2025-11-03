@@ -333,9 +333,6 @@
         }
       }
     },
-    "%lldms" : {
-
-    },
     "+%lld" : {
       "localizations" : {
         "de" : {
@@ -1275,7 +1272,7 @@
         }
       }
     },
-    "Duration (ms)" : {
+    "Duration (s)" : {
 
     },
     "EASY" : {
@@ -1929,9 +1926,6 @@
         }
       }
     },
-    "Individual request durations" : {
-
-    },
     "Information" : {
       "localizations" : {
         "de" : {
@@ -2460,9 +2454,6 @@
           }
         }
       }
-    },
-    "ms avg" : {
-
     },
     "Multis" : {
       "localizations" : {
@@ -3118,9 +3109,6 @@
     "Repeat tutorial" : {
 
     },
-    "Request" : {
-
-    },
     "Requests" : {
 
     },
@@ -3177,6 +3165,9 @@
           }
         }
       }
+    },
+    "s avg" : {
+
     },
     "Save" : {
 
@@ -3728,9 +3719,6 @@
         }
       }
     },
-    "Summary" : {
-
-    },
     "Support our Work!" : {
       "localizations" : {
         "de" : {
@@ -4072,6 +4060,12 @@
           }
         }
       }
+    },
+    "Time" : {
+
+    },
+    "Time window" : {
+
     },
     "Tip jar" : {
       "extractionState" : "stale",

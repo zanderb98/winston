@@ -26,14 +26,35 @@ func cleanSubs(_ subs: [ListingChild<SubredditData>]) -> [ListingChild<Subreddit
 
 extension RedditAPI {
     
+  // Simple per-credential cache for fetched subreddits
+  struct SubsCacheEntry {
+    let timestamp: Date
+    let subs: [ListingChild<SubredditData>]
+  }
   
-  func fetchAllSubs(after: String? = nil, accumulatedSubs: [ListingChild<SubredditData>]? = nil) async -> [ListingChild<SubredditData>]? {
+  // In-memory cache keyed by credential ID
+  private static var subsCache: [UUID: SubsCacheEntry] = [:]
+  
+  /// Fetch all subscribed subreddits for the current credential.
+  /// - Parameters:
+  ///   - after: Pagination cursor (internal use).
+  ///   - accumulatedSubs: Accumulator for recursion (internal use).
+  ///   - forceRefresh: If true, bypass cache and refetch from the API.
+  /// - Returns: The full list of subreddits or nil on failure.
+  func fetchAllSubs(after: String? = nil,
+                    accumulatedSubs: [ListingChild<SubredditData>]? = nil,
+                    forceRefresh: Bool = false) async -> [ListingChild<SubredditData>]? {
     // Base case: If 'after' is nil and some subs are already accumulated, simply return them.
     if let after = after, after.isEmpty, let accumulatedSubs = accumulatedSubs {
       return accumulatedSubs
     }
     
-    guard let _ = Defaults[.GeneralDefSettings].redditCredentialSelectedID else { return [] }
+    guard let credentialID = Defaults[.GeneralDefSettings].redditCredentialSelectedID else { return [] }
+    
+    // Return cached value if available and not forcing refresh (only at the top-level call)
+    if after == nil && !forceRefresh, let cached = RedditAPI.subsCache[credentialID] {
+      return cached.subs
+    }
     
     let params = FetchSubsPayload(limit: 100, after: after)
     
@@ -46,9 +67,10 @@ extension RedditAPI {
       
       if let dataAfter = data.data?.after, !dataAfter.isEmpty {
         // Recursive call with the new 'after' value and the updated accumulated subs.
-        return await fetchAllSubs(after: dataAfter, accumulatedSubs: newAccumulatedSubs)
+        return await fetchAllSubs(after: dataAfter, accumulatedSubs: newAccumulatedSubs, forceRefresh: forceRefresh)
       } else {
-        // All subs fetched, return the accumulated result
+        // All subs fetched, cache and return the accumulated result
+        RedditAPI.subsCache[credentialID] = SubsCacheEntry(timestamp: Date(), subs: newAccumulatedSubs)
         return newAccumulatedSubs
       }
     case .failure(let error):
@@ -110,11 +132,21 @@ extension RedditAPI {
     }
   }
   
-  func fetchSubsAndSyncCoreData() async {
-    if let fetchedSubs = await fetchAllSubs() {
+  /// Convenience to fetch (using cache unless forced) and sync to Core Data
+  func fetchSubsAndSyncCoreData(forceRefresh: Bool = false) async {
+    if let fetchedSubs = await fetchAllSubs(forceRefresh: forceRefresh) {
       await updateSubsInCoreData(with: fetchedSubs)
     }
   }
+  
+  /// Clears the cached subs for the provided credential (or current one if nil)
+  func invalidateSubsCache(for credentialID: UUID? = nil) {
+    let id = credentialID ?? Defaults[.GeneralDefSettings].redditCredentialSelectedID
+    if let id { RedditAPI.subsCache.removeValue(forKey: id) }
+  }
+  
+  /// Example usage in SwiftUI:
+  /// .refreshable { await api.fetchSubsAndSyncCoreData(forceRefresh: true) }
   
   
   //  func fetchSubs(after: String? = nil) async -> [ListingChild<SubredditData>]? {
@@ -183,3 +215,4 @@ extension RedditAPI {
     var raw_json = 1
   }
 }
+
