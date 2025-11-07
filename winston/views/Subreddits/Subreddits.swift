@@ -183,6 +183,14 @@ struct Subreddits: View, Equatable {
                       }
                   }
                 }
+                .onMove { source, destination in
+                  recentSubs.move(fromOffsets: source, toOffset: destination)
+                  recentSearchedSubs.move(fromOffsets: source, toOffset: destination)
+                }
+                .onDelete { offsets in
+                  recentSubs.remove(atOffsets: offsets)
+                  recentSearchedSubs.remove(atOffsets: offsets)
+                }
               }
             }
             
