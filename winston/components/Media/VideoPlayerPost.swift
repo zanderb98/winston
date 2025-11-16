@@ -15,6 +15,9 @@ class AVPlayerPool {
   private let queue = DispatchQueue(label: "com.app.avplayerpool")
   private var hasBeenReset: [String] = []
   
+  // Track which AVPlayerItem is currently attached to which AVPlayer (by object identity)
+  private var itemToPlayer: NSMapTable<AVPlayerItem, AVPlayer> = NSMapTable(keyOptions: .weakMemory, valueOptions: .weakMemory)
+  
   private init() {}
   
   func resetVideo(post: Post, video: SharedVideo) {
@@ -68,6 +71,7 @@ class AVPlayerPool {
       // Reset player state on main thread to avoid crashes
       DispatchQueue.main.async { [weak player] in
         guard let player = player else { return }
+        if let current = player.currentItem { AVPlayerPool.shared.disassociate(item: current) }
         player.pause()
         player.seek(to: .zero)
         player.replaceCurrentItem(with: nil)
@@ -90,9 +94,26 @@ class AVPlayerPool {
         allPlayers.forEach { $0.pause() }
       }
       
+      itemToPlayer.removeAllObjects()
       availablePlayers.removeAll()
       inUsePlayers.removeAll()
     }
+  }
+
+  // MARK: - Item association tracking
+  func associate(item: AVPlayerItem?, with player: AVPlayer?) {
+    guard let item, let player else { return }
+    itemToPlayer.setObject(player, forKey: item)
+  }
+
+  func disassociate(item: AVPlayerItem?) {
+    guard let item else { return }
+    itemToPlayer.removeObject(forKey: item)
+  }
+
+  func playerFor(item: AVPlayerItem?) -> AVPlayer? {
+    guard let item else { return nil }
+    return itemToPlayer.object(forKey: item)
   }
 }
 
@@ -107,6 +128,15 @@ struct SharedVideo: Equatable {
   var size: CGSize
   var key: String
   private var isCleanedUp = false
+  
+  func makePlayerItem() -> AVPlayerItem {
+    // Always return a new AVPlayerItem for safety to avoid multi-attachment
+    if let asset = Caches.videos.get(key: self.key) {
+      return AVPlayerItem(asset: asset)
+    } else {
+      return AVPlayerItem(url: self.url)
+    }
+  }
   
   static func get(url: URL, size: CGSize, resetCache: Bool = false, prevVideoId: String? = nil) -> SharedVideo {
     if resetCache {
@@ -209,9 +239,30 @@ struct VideoPlayerPost: View, Equatable {
     }
     
     DispatchQueue.main.async {
-      withAnimation {
-        player?.replaceCurrentItem(with: sharedVideo.playerItem)
+      guard let player = player else { return }
+
+      // If the shared playerItem is already attached to a different player, create a fresh item
+      let incomingItem: AVPlayerItem
+      if let attachedPlayer = AVPlayerPool.shared.playerFor(item: sharedVideo.playerItem), attachedPlayer !== player {
+        incomingItem = sharedVideo.makePlayerItem()
+      } else {
+        incomingItem = sharedVideo.playerItem
       }
+
+      // If the current item is the same instance, do nothing
+      if let current = player.currentItem, current === incomingItem {
+        return
+      }
+
+      // Disassociate previous item, then replace and associate new one
+      if let current = player.currentItem {
+        AVPlayerPool.shared.disassociate(item: current)
+      }
+
+      withAnimation {
+        player.replaceCurrentItem(with: incomingItem)
+      }
+      AVPlayerPool.shared.associate(item: incomingItem, with: player)
     }
     
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -426,6 +477,7 @@ struct VideoPlayerPost: View, Equatable {
       if (Nav.shared.currVideos[sharedVideo.id] ?? 0) <= 1 {
           Task(priority: .background) {
               await MainActor.run {
+                  if let current = player?.currentItem { AVPlayerPool.shared.disassociate(item: current) }
                   player?.seek(to: .zero)
                   player?.pause()
               }
@@ -667,6 +719,8 @@ struct FullScreenVP: View {
   private func performDismissal() {
     isDismissing = true
     isActive = false
+    
+    if let current = player?.currentItem { AVPlayerPool.shared.disassociate(item: current) }
     
     // Reset player audio settings
     player?.volume = 0.0
