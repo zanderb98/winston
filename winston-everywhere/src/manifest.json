@@ -24,13 +24,13 @@
       "js": [ "common.js", "OpenInWinstonBanner/openInWinston.js" ],
       "css": [ "OpenInWinstonBanner/openInWinstonBannerStyles.css" ],
       "matches": [ "*://*.reddit.com/*" ],
-      "exclude_matches": [ "*://*.reddit.com/prefs/apps*", "*://*.reddit.com/api/v1/authorize" ]
+      "exclude_matches": [ "*://*.reddit.com/prefs/apps*", "*://*.reddit.com/api/v1/authorize", "*://*.reddit.com/r/*/submit/*" ]
     },
-//    {
-//      "js": [ "common.js", "openWinstonEverywhere.js" ],
-//      "matches": [ "*://*/*" ],
-//      "exclude_matches": [ "*://*.reddit.com/prefs/apps*", "*://*.reddit.com/api/v1/authorize" ]
-//    }
+    {
+      "js": [ "common.js", "openWinstonEverywhere.js" ],
+      "matches": [ "*://*/*" ],
+      "exclude_matches": [ "*://*.reddit.com/prefs/apps*", "*://*.reddit.com/api/v1/authorize", "*://*.reddit.com/r/*/submit/*" ]
+    }
   ],
   "action": {
     "default_popup": "ExtensionWindow/popup.html",

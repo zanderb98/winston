@@ -25,8 +25,22 @@ class MarkdownUtil {
         
         // Replace http:// or https:// in existing markdown links
         processedText = processedText.replacingOccurrences(
-            of: #"([[(\w\])\/.:*]+])\((https?:\/\/)(\S+?|)(?:)\)"#,
+            of: #"(\[[\w\s\[\]\/.:*]+\])\((https?:\/\/)(\S+?)(?:)\)"#,
             with: "$1(winstonapp://$3)",
+            options: .regularExpression
+        )
+        
+        // **NEW: Handle Reddit share links - keep as external https:// links**
+        processedText = processedText.replacingOccurrences(
+            of: #"\b(?<!\[|\()(https?://(?:www\.)?reddit\.com/r/\w+/s/\w+)\b"#,
+            with: "[$0]($0)",
+            options: .regularExpression
+        )
+        
+        // **NEW: Handle standard Reddit comment links (convert to internal format)**
+        processedText = processedText.replacingOccurrences(
+            of: #"\b(?<!\[|\()https?://(?:www\.)?reddit\.com/r/(\w+)/comments/(\w+)(?:/[^\s\)]*)?\b"#,
+            with: "[https://www.reddit.com/r/$1/comments/$2](winstonapp://r/$1/comments/$2)",
             options: .regularExpression
         )
         
@@ -51,9 +65,9 @@ class MarkdownUtil {
             options: [.regularExpression, .caseInsensitive]
         )
         
-        // Replace /r/example or r/example
+        // Replace /r/example or r/example (but NOT when part of a URL)
         processedText = processedText.replacingOccurrences(
-            of: "(\\s|^)(/?r/\\w+)(\\s|\\b)",
+            of: "(\\s|^)(?<!/)(/r/\\w+)(\\s|\\b)",
             with: " [$2](winstonapp://$2) ",
             options: [.regularExpression, .caseInsensitive]
         )

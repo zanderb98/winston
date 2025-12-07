@@ -1,125 +1,226 @@
-// Winston Everywhere: inject banner instead of redirecting
+"use strict";
 
-// Listen for completed navigation in main frame
-browser.webNavigation.onCompleted.addListener(async function(details) {
-  try {
-    if (details.frameId !== 0) return; // only main frame
-    const urlStr = details.url;
-    if (!urlStr) return;
+// Winston Everywhere (Content Script): inject banner directly on reddit pages
+(function() {
+  const LOG_PREFIX = '[WinstonEverywhere]';
 
-    let url;
+  function isRedditHost(hostname) {
+    return typeof hostname === 'string' && hostname.includes('reddit.com');
+  }
+    
+  function isSubredditSubmitPage(location) {
+    const path = location.pathname;
+    const regex = /^\/r\/[^\/]+\/submit\/?$/;
+    return regex.test(path);
+  }
+
+  function buildWinstonUrl(loc) {
     try {
-      url = new URL(urlStr);
+      const url = new URL(loc.href);
+      return `winstonapp://${url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname}${url.search}`;
     } catch (e) {
-      console.error('[WinstonEverywhere] Invalid URL:', urlStr, e);
-      return;
+      console.error(LOG_PREFIX, 'Failed to build Winston URL from location:', loc && loc.href, e);
+      return null;
     }
+  }
 
-    // Only act on reddit
-    if (!url.hostname.includes('reddit.com')) return;
-
-    console.log('[WinstonEverywhere] Page completed on reddit:', urlStr);
-
-    // Build Winston URL preserving path and query
-    const winstonUrl = `https://app.winston.cafe${url.pathname}${url.search}`;
-
-    // Inject banner content script
+  function injectBannerIfNeeded() {
     try {
-      await browser.tabs.executeScript(details.tabId, {
-        code: `
-          (function() {
-            try {
-              if (document.getElementById('winston-open-banner')) return; // already added
+      const { location } = window;
+      if (!location || !isRedditHost(location.hostname) || isSubredditSubmitPage(location)) {
+        removeBannerIfPresent();
+        return;
+      }
 
-              const banner = document.createElement('div');
-              banner.id = 'winston-open-banner';
-              banner.setAttribute('role', 'region');
-              banner.setAttribute('aria-label', 'Open in Winston');
-              banner.style.position = 'fixed';
-              banner.style.top = '0';
-              banner.style.left = '0';
-              banner.style.right = '0';
-              banner.style.zIndex = '2147483647';
-              banner.style.display = 'flex';
-              banner.style.justifyContent = 'space-between';
-              banner.style.alignItems = 'center';
-              banner.style.padding = '10px 14px';
-              banner.style.background = 'linear-gradient(90deg, #111827, #1f2937)';
-              banner.style.color = '#ffffff';
-              banner.style.fontFamily = '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif';
-              banner.style.fontSize = '14px';
-              banner.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)';
+      const existing = document.getElementById('winston-open-banner');
+      const winstonUrl = buildWinstonUrl(location);
+      if (!winstonUrl) return;
 
-              const text = document.createElement('span');
-              text.textContent = 'Open this post in Winston';
-              text.style.marginRight = '12px';
+      if (existing) {
+        const link = existing.querySelector('a#winston-open-link');
+        if (link) link.href = winstonUrl;
+        return;
+      }
 
-              const link = document.createElement('a');
-              link.href = ${JSON.stringify(winstonUrl)};
-              link.textContent = 'Open in Winston';
-              link.style.background = '#2563eb';
-              link.style.color = '#fff';
-              link.style.padding = '8px 12px';
-              link.style.borderRadius = '6px';
-              link.style.textDecoration = 'none';
-              link.style.fontWeight = '600';
-              link.style.marginLeft = '8px';
-              link.target = '_blank';
-              link.rel = 'noopener noreferrer';
+      // Create banner with improved styling
+      const banner = document.createElement('div');
+      banner.id = 'winston-open-banner';
+      banner.setAttribute('role', 'region');
+      banner.setAttribute('aria-label', 'Open in Winston');
+      banner.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2147483647;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #1a1a1a 0%, #2d1410 100%);
+        color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 98, 78, 0.2);
+        transition: transform 0.3s ease;
+      `;
 
-              const left = document.createElement('div');
-              left.style.display = 'flex';
-              left.style.alignItems = 'center';
-              left.appendChild(text);
-              left.appendChild(link);
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.setAttribute('aria-label', 'Dismiss banner');
+      close.textContent = '✕';
+      close.style.cssText = `
+        background: transparent;
+        border: none;
+        color: #FF624E;
+        font-size: 24px;
+        cursor: pointer;
+        margin-right: 16px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-tap-highlight-color: transparent;
+        line-height: 1;
+      `;
 
-              const close = document.createElement('button');
-              close.type = 'button';
-              close.setAttribute('aria-label', 'Dismiss banner');
-              close.textContent = '×';
-              close.style.background = 'transparent';
-              close.style.border = 'none';
-              close.style.color = '#fff';
-              close.style.fontSize = '20px';
-              close.style.cursor = 'pointer';
-              close.style.marginLeft = '12px';
-
-              close.addEventListener('click', function() {
-                banner.remove();
-              });
-
-              banner.appendChild(left);
-              banner.appendChild(close);
-
-              document.documentElement.appendChild(banner);
-
-              // Push content down so it doesn't get hidden under fixed headers
-              const spacer = document.createElement('div');
-              spacer.id = 'winston-open-banner-spacer';
-              spacer.style.height = '48px';
-              spacer.style.width = '100%';
-              spacer.style.pointerEvents = 'none';
-              document.body.prepend(spacer);
-
-            } catch (err) {
-              console.error('[WinstonEverywhere] Failed to inject banner:', err);
-            }
-          })();
-        `
+      close.addEventListener('click', function() {
+        banner.style.transform = 'translateY(-100%)';
+        setTimeout(() => removeBannerIfPresent(), 300);
       });
-    } catch (injectErr) {
-      console.error('[WinstonEverywhere] executeScript error:', injectErr);
-    }
-  } catch (outerErr) {
-    console.error('[WinstonEverywhere] Unexpected error:', outerErr);
-  }
-});
 
-// Cleanup: ensure old redirect listener is not used
-try {
-  if (typeof listener !== 'undefined' && listener) {
-    browser.webNavigation.onBeforeNavigate.removeListener(listener);
+      const text = document.createElement('span');
+      text.textContent = 'Open in Winston';
+      text.style.cssText = `
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        color: #e0e0e0;
+        flex: 1;
+      `;
+
+      const link = document.createElement('a');
+      link.id = 'winston-open-link';
+      link.href = winstonUrl;
+      link.textContent = '';
+      link.style.cssText = `
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #FF624E;
+        color: #ffffff;
+        padding: 8px 16px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+        box-shadow: 0 2px 8px rgba(255, 98, 78, 0.4);
+      `;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+
+      const linkText = document.createElement('span');
+      linkText.textContent = 'Open App';
+      link.appendChild(linkText);
+
+      const arrow = document.createElement('span');
+      arrow.textContent = '→';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.style.cssText = `
+        display: inline-block;
+        font-size: 14px;
+      `;
+      link.appendChild(arrow);
+
+      banner.appendChild(close);
+      banner.appendChild(text);
+      banner.appendChild(link);
+
+      document.documentElement.appendChild(banner);
+
+      // Animate in
+      requestAnimationFrame(() => {
+        banner.style.transform = 'translateY(0)';
+      });
+
+      ensureSpacer();
+
+      console.log(LOG_PREFIX, 'Banner injected on reddit:', window.location.href);
+    } catch (err) {
+      console.error(LOG_PREFIX, 'Failed to inject banner:', err);
+    }
   }
-} catch (e) {
-  // ignore
-}
+
+  function ensureSpacer() {
+    let spacer = document.getElementById('winston-open-banner-spacer');
+    if (!spacer) {
+      spacer = document.createElement('div');
+      spacer.id = 'winston-open-banner-spacer';
+      spacer.style.height = '52px';
+      spacer.style.width = '100%';
+      spacer.style.pointerEvents = 'none';
+      if (document.body && document.body.firstChild) {
+        document.body.insertBefore(spacer, document.body.firstChild);
+      } else if (document.body) {
+        document.body.appendChild(spacer);
+      } else {
+        document.addEventListener('DOMContentLoaded', () => ensureSpacer(), { once: true });
+      }
+    }
+  }
+
+  function removeBannerIfPresent() {
+    const banner = document.getElementById('winston-open-banner');
+    if (banner && banner.parentNode) banner.parentNode.removeChild(banner);
+    const spacer = document.getElementById('winston-open-banner-spacer');
+    if (spacer && spacer.parentNode) spacer.parentNode.removeChild(spacer);
+  }
+
+  function setupSpaNavigationWatcher() {
+    let lastHref = location.href;
+
+    function checkUrlChange() {
+      if (location.href !== lastHref) {
+        lastHref = location.href;
+        injectBannerIfNeeded();
+      }
+    }
+
+    const origPushState = history.pushState;
+    const origReplaceState = history.replaceState;
+
+    if (typeof origPushState === 'function') {
+      history.pushState = function(...args) {
+        const ret = origPushState.apply(this, args);
+        setTimeout(checkUrlChange, 0);
+        return ret;
+      };
+    }
+
+    if (typeof origReplaceState === 'function') {
+      history.replaceState = function(...args) {
+        const ret = origReplaceState.apply(this, args);
+        setTimeout(checkUrlChange, 0);
+        return ret;
+      };
+    }
+
+    window.addEventListener('popstate', () => setTimeout(checkUrlChange, 0));
+
+    const observer = new MutationObserver(() => {
+      checkUrlChange();
+    });
+    observer.observe(document.documentElement, { subtree: true, childList: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      injectBannerIfNeeded();
+      setupSpaNavigationWatcher();
+    });
+  } else {
+    injectBannerIfNeeded();
+    setupSpaNavigationWatcher();
+  }
+})();
