@@ -26,11 +26,11 @@
       "matches": [ "*://*.reddit.com/*" ],
       "exclude_matches": [ "*://*.reddit.com/prefs/apps*", "*://*.reddit.com/api/v1/authorize" ]
     },
-    {
-      "js": [ "common.js", "openWinstonEverywhere.js" ],
-      "matches": [ "*://*/*" ],
-      "exclude_matches": [ "*://*.reddit.com/prefs/apps*", "*://*.reddit.com/api/v1/authorize" ]
-    }
+//    {
+//      "js": [ "common.js", "openWinstonEverywhere.js" ],
+//      "matches": [ "*://*/*" ],
+//      "exclude_matches": [ "*://*.reddit.com/prefs/apps*", "*://*.reddit.com/api/v1/authorize" ]
+//    }
   ],
   "action": {
     "default_popup": "ExtensionWindow/popup.html",

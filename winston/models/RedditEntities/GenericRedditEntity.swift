@@ -122,12 +122,51 @@ class GenericRedditEntity<T: GenericRedditEntityDataType, B: Hashable>: Identifi
     return copy
   }
   
-  func fetchItself() {
+  func fetchItself(completion: ((T) -> Void)? = nil) {
     Task(priority: .background) {
-      if let data = await RedditAPI.shared.fetchInfo(fullnames: ["\(self.selfPrefix)_\(id)"]) {
-        await MainActor.run { withAnimation {
-          if let data = data as? T { self.data = data }
-        } }
+      let fullname = "\(self.typePrefix!)_\(id)"
+      let result = await RedditAPI.shared.fetchInfo(fullnames: [fullname])
+
+      guard let result else { return }
+
+      // Case 1: API returned the entity directly as T (existing behavior)
+      if let direct = result as? T {
+        await MainActor.run {
+          withAnimation { self.data = direct }
+          completion?(direct)
+        }
+        return
+      }
+
+      // Case 2: API returned a FetchInfoResponse wrapper (e.g., Listing of various types)
+      if let wrapped = result as? RedditAPI.FetchInfoResponse {
+        // helper to assign on main actor
+        func assign(_ value: T) async {
+          await MainActor.run {
+            withAnimation { self.data = value }
+            completion?(value)
+          }
+        }
+
+        switch wrapped {
+        case .post(let listing):
+          if let first = listing.data?.children?.first?.data as? T {
+            await assign(first)
+          }
+        case .comment(let listing):
+          if let first = listing.data?.children?.first?.data as? T {
+            await assign(first)
+          }
+        case .user(let listing):
+          if let first = listing.data?.children?.first?.data as? T {
+            await assign(first)
+          }
+        case .subreddit(let listing):
+          if let first = listing.data?.children?.first?.data as? T {
+            await assign(first)
+          }
+        }
+        return
       }
     }
   }
@@ -174,3 +213,4 @@ case comment(Comment)
     }
   }
 }
+

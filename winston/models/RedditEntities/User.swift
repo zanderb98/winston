@@ -77,7 +77,7 @@ extension User {
     }
   }
   
-  func fetchItself() {
+  func fetchItself(completion: ((T) -> Void)? = nil) {
     Task(priority: .background) {
       if let data = await RedditAPI.shared.fetchUser(id) {
         await MainActor.run { withAnimation {

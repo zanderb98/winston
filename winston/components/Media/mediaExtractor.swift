@@ -201,7 +201,11 @@ func mediaExtractor(compact: Bool, contentWidth: Double = .screenW, _ data: Post
           return .comment(entityExtracted)
         }
         let post = Post(id: postId, typePrefix: Post.prefix)
-        post.fetchItself()
+          post.fetchItself() { postData in
+            if let theme {
+              post.setupWinstonData(data: postData, contentWidth: contentWidth, secondary: true, theme: theme)
+            }
+          }
         let entityExtracted = EntityExtracted(subredditID: subredditName, postID: postId, entity: post)
         return .post(entityExtracted)
 //        return .post(id: postId, subreddit: subredditName)

@@ -799,7 +799,7 @@
 		EC31881B2A92BBFB00CB3738 /* Multi.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Multi.swift; sourceTree = "<group>"; };
 		EC3188202A92D6D900CB3738 /* MultiPostsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiPostsView.swift; sourceTree = "<group>"; };
 		EC3188242A92F42800CB3738 /* MultiLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultiLink.swift; sourceTree = "<group>"; };
-		EC31882A2A94439D00CB3738 /* mediaExtractor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = mediaExtractor.swift; sourceTree = "<group>"; };
+		EC31882A2A94439D00CB3738 /* mediaExtractor.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = mediaExtractor.swift; sourceTree = "<group>"; tabWidth = 2; };
 		EC31882C2A94736E00CB3738 /* MediaPresenter.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = MediaPresenter.swift; sourceTree = "<group>"; tabWidth = 2; };
 		EC3188312A94770700CB3738 /* GalleryThumb.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryThumb.swift; sourceTree = "<group>"; };
 		EC31DB172B12F0EB00A777ED /* CircleWave.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = CircleWave.metal; sourceTree = "<group>"; };
@@ -898,7 +898,7 @@
 		EC5BA2692BCB9659003DF7E6 /* LazyImageStateOpt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LazyImageStateOpt.swift; sourceTree = "<group>"; };
 		EC5EDA702A4DA94A00140A08 /* SwipeActionsOld.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeActionsOld.swift; sourceTree = "<group>"; };
 		EC5EDA722A4E8EC400140A08 /* fetchSub.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = fetchSub.swift; sourceTree = "<group>"; tabWidth = 2; };
-		EC5EDA742A4E937700140A08 /* GenericRedditEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenericRedditEntity.swift; sourceTree = "<group>"; };
+		EC5EDA742A4E937700140A08 /* GenericRedditEntity.swift */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.swift; path = GenericRedditEntity.swift; sourceTree = "<group>"; tabWidth = 2; };
 		EC5EDA762A4EA03800140A08 /* subscribeSubs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = subscribeSubs.swift; sourceTree = "<group>"; };
 		EC5EDA782A4F4D4200140A08 /* vote.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = vote.swift; sourceTree = "<group>"; };
 		EC6081152B434B19001A1077 /* NoBtnStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoBtnStyle.swift; sourceTree = "<group>"; };
